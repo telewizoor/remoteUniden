@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <!--link rel="icon" type="image/x-icon" href="/favicon.ico"-->
+    <title>Deye Inverter</title>
+  </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.3/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
+
+<body>
+  <!--button onclick="refreshButton()">Refresh Deye Status</button>
+  <button onclick="refreshSwStatus()">Pobierz dane o stratach własnych</button-->
+
+  <center>
+    </br>
+    <div id="deyeMain" class="grid-container-deye-main">
+      <div id="deyeMainHeader" class="deye-container-deye-main-header">Deye status</div>
+      <div id="deyeMainLeftTop" class="deyeMainValue" onclick="showSubStatus('solar')">PV1 Power: 0.00W<br>PV2 Power: 0.00W</div> 
+      <div id="deyeMainRightTop" class="deyeMainValue" onclick="showSubStatus('grid')">Total Grid Power:<br>0.00W</div> 
+      <div id="deyeMainLeftBot" class="deyeMainValue" onclick="showSubStatus('battery')">Battery Power: 0.0W<br>Battery SOC: 0.00%</div> 
+      <div id="deyeMainRightBot" class="deyeMainValue" onclick="showSubStatus('load')">Total Load Power:<br>0.0W</div> 
+    </div>
+    </br>
+    <div id="deyeSubStatus" class=""></div>
+    </br></br></br></br></br></br></br></br></br></br></br></br></br></br></br></br></br></br>
+    <button onclick="refreshButton()">Refresh Deye Status</button>
+  </center>
+
+  <div id="solarStatus" class="deyeStatus">Solar</div>
+  <div id="batteryStatus" class="deyeStatus">Battery</div>
+  <div id="gridStatus" class="deyeStatus">Grid</div>
+  <div id="loadStatus" class="deyeStatus">Load</div>
+  <div id="inverterStatus" class="deyeStatus">Inverter</div>
+  <div id="default" class="deyeStatus">-</div>
+
+  <div id="swStatus" class="deyeStatus">Straty wlasne</div>
+  <div id="swStatusLog" class="deyeStatus">Straty wlasne LOG</div>
+
+      <!--div id="deyeSolar" class="grid-container-deye-solar">
+      <div id="deyeSolarPower" class="deye-solar-header">Solar</div>
+      <div id="deyeSolarPower" class="deye-solar-power">Power: 0kWh</div>
+      <div id="upperText" class="deye-grid-value">Daily = 26.0kWh</div>
+      <div id="midLine" class="deye-grid-value">Total = 120.0kWh</div>
+      <div id="bottomLine" class="deye-grid-value">PV1-V: 10V</div>
+      <div id="sigPower" class="deye-grid-value">PV1-V: 10V</div>
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+    </div>
+</br>
+    <div id="deyeBattery" class="grid-container-deye-battery">
+      <div id="deyeSolarPower" class="deye-battery-header">Battery</div>
+      <div id="upperText" class="deye-grid-value">Discharge</div>
+      <div id="midLine" class="deye-grid-value">SOC: 60%</div>
+      <div id="bottomLine" class="deye-grid-value">U: 52.68V</div>
+      <div id="sigPower" class="deye-grid-value">I: 0.23A</div>
+      <div id="sigMod" class="deye-grid-value">Power: 120W</div> 
+      <div id="sigMod" class="deye-grid-value">Temp: 14.0*C</div> 
+    </div>
+  </br>
+    <div id="deyeSolar" class="grid-container-deye-grid">
+      <div id="deyeSolarPower" class="deye-grid-header">Grid</div>
+      <div id="deyeGridBuyNow" class="deye-grid-left">Buy <br> 521W <br> 50.0Hz</div>
+      <div id="deyeSolarPower" class="deye-grid-right">Buy <br> Today = 2.8kWh <br> Total = 502.70kWh</div>
+      <div id="upperText" class="deye-grid-value">CT1: 119W</div>
+      <div id="midLine" class="deye-grid-value">LD1: 119W</div>
+      <div id="sigMod" class="deye-grid-value">SOLD:</div> 
+      <div id="sigPower" class="deye-grid-value">CT1: 119W</div>
+      <div id="sigMod" class="deye-grid-value">LD1: 119W</div> 
+      <div id="bottomLine" class="deye-grid-value">Today=17.3kWh</div>
+      <div id="sigMod" class="deye-grid-value">LD1: 119W</div> 
+      <div id="sigMod" class="deye-grid-value">LD1: 119WV</div>
+      <div id="sigMod" class="deye-grid-value">Total=27.0kWh</div> 
+      <div id="sigMod" class="deye-grid-value">L1: 234V</div> 
+      <div id="sigMod" class="deye-grid-value">L2: 231V</div>
+      <div id="sigMod" class="deye-grid-value">L4: 228V</div> 
+    </div-->
+
+</body>
+
+<script src="./deye/deyeClient.js"></script>
+
+</html>
