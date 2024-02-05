@@ -1,5 +1,6 @@
 # remoteUniden
 NodeJS server for remote control of Uniden UBC125XLT(and others)
+Currently I'm running that on Raspberry Pi Zero 2W + UBC125XLT + USB Audio Card
 
 # Introduction
 That is in really early stage, loooks awful, unformatted etc etc but it is working!
