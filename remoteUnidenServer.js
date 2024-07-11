@@ -9,9 +9,9 @@ var io = require('socket.io')(http, {
     origin: '*',
   }
 }); 
-const deye = require("./deye/deye.js");
+//const deye = require("./deye/deye.js");
 
-var deyeEnabled       = 1;
+var deyeEnabled       = 0;
 var maxLastCalls      = 10;
 var unidenRefreshRate = 250;    /* ms */
 var lowPassFilter     = '5000'; /* Hz */
