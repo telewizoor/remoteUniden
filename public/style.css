@@ -4,12 +4,12 @@
   white-space: pre-wrap; 
   font-family:'Lucida Console', monospace; 
 }
-.upperText { grid-area: header; }
+.upperText { grid-area: header; white-space: pre-wrap; }
 .upMidLine { grid-area: up-bot; white-space: pre-wrap; }
 .midLine { grid-area: mid-left; white-space: pre-wrap; }
 .bottomLine { font-family:'Lucida Console', monospace; grid-area: footer; white-space: pre-wrap; }
-.sigPower { grid-area: bot-right; }
-.sigMod { grid-area: bot-left; }
+.sigPower { grid-area: bot-right; white-space: pre-wrap; }
+.sigMod { grid-area: bot-left; white-space: pre-wrap; }
 
 .grid-container-status {
   display: grid;

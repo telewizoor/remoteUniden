@@ -1,15 +1,43 @@
 var curUrl = window.location.href.slice(0, -1);
-var socket = io(curUrl + ':80'); //load socket.io-client and connect to the host that serves the page
-//var socket = io('http://telewizoor-malina.duckdns.org:8080'); //load socket.io-client and connect to the host that serves the page
-//var socket = io('http://192.168.1.31:8080'); //load socket.io-client and connect to the host that serves the page
-//window.alert(curUrl + '80');
+var socket = io(curUrl + ':80');
 
 var lastCalls;
 var lastCallsLines;
-var onLoad = 1;
+var onLoad       = 1;
 var maxLastCalls = 10;
+var recExt       = '.mp3';
+var delayMs      = 1; /* delay for showing data */
+var delayEnabled = 0;
+var channelsToWrite = '';
+
+var squelchIndex           = 14;
+var lastCallsIndexFromEnd  =  4; //23; // -3
+var cpuLoadIndexFromEnd    =  3; //24;
+var cpuTempIndexFromEnd    =  2; //25;
+var wifiStatusIndexFromEnd =  1; //26;
 
 document.body.onload = createLastCalls();
+document.body.onload = changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
+
+function readSingleFile(e) {
+  var file = e.target.files[0];
+  if (!file) {
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var contents = e.target.result;
+    updateChannelsToWrite(contents);
+  };
+  reader.readAsText(file);
+}
+
+function updateChannelsToWrite(contents) {
+  channelsToWrite = contents;
+}
+
+document.getElementById('file-input')
+  .addEventListener('change', readSingleFile, false);
 
 function callToRecName(call, num, ext=1) {
   var name = '';
@@ -23,7 +51,7 @@ function callToRecName(call, num, ext=1) {
   }
 
   if(ext==1) {
-    name = name + ".mp3";
+    name = name + recExt;
   }
 
   return name;
@@ -38,14 +66,14 @@ function urlExists(url)
 }
 
 function saveRecord(elName, recName) {
-  socket.emit("saveRecord", String(recName));
+  sendSocketData("saveRecord", String(recName));
   elName.style.visibility = 'hidden';
 }
 
 function changeAudio(elName, source) {
   var src = source;
   if(src.search("none") > -1){
-        src = 'music/music.mp3';
+    src = 'music/music.mp3';
   }
   var audioElement = document.getElementById(elName);
   audioElement.setAttribute('src', src);
@@ -72,7 +100,11 @@ function addPlayer(name, source) {
   sound.controls = 'controls';
   sound.src      = source; //'http://192.168.1.31:8000/Stream.mp3';
 
-  sound.setAttribute('type', 'audio/mpeg');
+  if (source.includes('.mp3')) {
+    sound.setAttribute('type', 'audio/mpeg');
+} else if (source.includes('.wav')) {
+    sound.setAttribute('type', 'audio/x-wav');
+}
 
   newLabel.setAttribute('id', "Label" + name);
   newLabel.setAttribute('class', "lastCallsAudioLabels");
@@ -88,7 +120,7 @@ function addPlayer(name, source) {
 }
 
 function createLastCalls() {
-  for (let i = 0; i < maxLastCalls; i++) {
+  for (var i = 0; i < maxLastCalls; i++) {
     addPlayer('LastCall' + i," ");
   }
 }
@@ -98,39 +130,39 @@ function updateLastCallsButton() {
 }
 
 function updateLastCalls(calls) {
-  for (let i = 0; i < maxLastCalls; i++) {
+  var reqTable = [];
+  for (var i = 0; i < maxLastCalls; i++) {
     if(calls[i] != null && calls[i] != '') {
-      let recName = '/rec/' + callToRecName(calls[i], 999);
-      let divName = 'LastCall' + i;
+      var recName = '/rec/' + callToRecName(calls[i], 999);
+      var divName = 'LastCall' + i;
 
       /* update source only on difference */
-      if (document.getElementById('Label' + divName).textContent != calls[i]) {
+      //if (document.getElementById('Label' + divName).textContent != calls[i]) {
         $('#Label' + divName).text(calls[i]);
         /* dont update audio for last one - there is no ready recording */
-        if (i < maxLastCalls-1) {
-          changeAudio(divName, curUrl + recName);
-          /* save button */
-          if(recName.includes(".mp3") && urlExists(recName) && !urlExists("saved_rec" + recName.slice(4))) {
-            document.getElementById('save' + divName).setAttribute("onclick", "saveRecord(save" + divName + ", \"" + recName.toString() + "\")");
-            document.getElementById('save' + divName).style.visibility = 'visible';
-          } else {
-            document.getElementById('save' + divName).style.visibility = 'hidden';
-          }
+        if (i == maxLastCalls-1) {
+          recName = recName.replace(recExt, '_0' + recExt);
         }
-      }
+        changeAudio(divName, curUrl + recName);
+        /* create table for asking if recording is saved */
+        reqTable.push(recName);
+      //}
+    } else {
+      reqTable.push(0);
     }
+  }
+  /* ask if current last calls are already saved */
+  if( reqTable.length > 0 ) {
+    checkIfRecordsSaved(reqTable);
   }
 }
 
-changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
-//window.alert(curUrl.replace("https", "http") + ':8000/Stream.mp3');
-
-/* delay for showing data */
-var delayMs = 1;
-var delayEnabled = 0;
+function checkIfRecordsSaved(table) {
+  sendSocketData("checkIfRecordsSaved", table);
+}
 
 function buttonPress(button_type) {
-  socket.emit("buttonPress", String(button_type));
+  sendSocketData("buttonPress", String(button_type));
 }
 
 function debugCheckBox(input) {
@@ -147,6 +179,23 @@ function delayCheckBoxPress(input) {
   } else {
     delayMs = 5000;
   }
+}
+
+function readChannelMemButton() {
+  sendSocketData("readChannelMem");
+}
+
+function writeChannelMemButton() {
+  var chList = channelsToWrite;
+  if( chList != '' && chList.includes('CIN') ) {
+    sendSocketData("writeChannelMem", chList);
+  }
+}
+
+function sendCmd() {
+  var cmd = "CIN,1,BALICE ATIS,01261250,AM,0,2,1,0";
+  var prg = 1;
+  sendSocketData("unidenSendCmd", cmd, prg);
 }
 
 function hex2a(hexx) {
@@ -172,11 +221,35 @@ function buf2hex(buffer) { // buffer is an ArrayBuffer
       .join('');
 }
 
+function sendSocketData(cmd = '', data1 = '', data2 = '') {
+  test = CryptoJS.SHA256($('#password').val()).toString(CryptoJS.enc.Hex);
+  socket.emit('unidenMain', CryptoJS.SHA256($('#password').val()).toString(CryptoJS.enc.Hex), cmd, data1, data2);
+}
+
+socket.on('channelInfo', function(data) {
+  $('#debugTxt').text("");
+  $('#debugTxt').text(data);
+});
+
+socket.on('recordsSaved', function(data) {
+  for(var i = 0; i < maxLastCalls; i++) {
+    var recName = data[i*2];
+    var divName = 'LastCall' + i;
+    if( data[i*2+1] == 0 && recName != "0" ) {
+      document.getElementById('save' + divName).setAttribute("onclick", "saveRecord(save" + divName + ", \"" + recName.toString() + "\")");
+      document.getElementById('save' + divName).style.visibility = 'visible';
+    } else {
+      document.getElementById('save' + divName).style.visibility = 'hidden';
+    }
+  }
+});
+
 socket.on('unidenText', function(data) {
   var receivedData = data;
   var receivedDataHex = buf2hex(receivedData);
   var commaParserHex = receivedDataHex.split('2c');
   var commaParser = arrayBufferToString(data).split(',');
+  var upperSmallLine = commaParser[2].split(' ') /* strange string with status of HOLD, squelch, voltage etc(first line) */
   var upperLine = commaParser[4];
   var midLine = commaParser[6];
   var bottomLine = commaParser[12];
@@ -189,17 +262,20 @@ socket.on('unidenText', function(data) {
     frequency = commaParser[6].split(' ')[2];
   }
 
-  frequency = frequency.slice(0, -1);
+  try {
+    frequency = frequency.slice(0, -1);
+  }
+  catch {
+    frequencu = '';
+  }
 
-  // strange string with status of HOLD, squelch, voltage etc(first line)
-  var upperSmallLine = commaParser[2].split(' ')
-  var squelch = 0;
-  var hold = '';
-  var lo = '';
+  var squelch  = 0;
+  var hold     = '';
+  var lo       = '';
   var sigPower = '0/5';
-  var sigMod = '';
+  var sigMod   = '';
 
-  /* hold */
+  /* Hold */
   if (commaParserHex[2].includes("8d8e8f90")) {
     hold = '[HOLD]';
   }
@@ -209,7 +285,7 @@ socket.on('unidenText', function(data) {
     lo = '[TL/O]';
   }
   
-  /* sila: a6 a7 a8 a9 a ?? */
+  /* signal strength: a6 a7 a8 a9 a ?? */
   if (commaParserHex[2].includes("a6")) {
     sigPower = '1/5';
   } else if (commaParserHex[2].includes("a7")) {
@@ -222,19 +298,16 @@ socket.on('unidenText', function(data) {
     sigPower = '5/5';
   }
 
-  /* squelch */
-  if (sigPower != '0/5') {
-    squelch = 1;
-  }
-
   var func = '';
+  /* [F] is coded as 0x8b */
   if (commaParserHex[2].slice(0, 2) == '8b') {
     func = "[F]";
   }
 
-  squelch = parseInt(commaParser[14]);
+  /* get squelch from received data(uniden uart/usb) */
+  squelch = parseInt(commaParser[squelchIndex]);
 
-  lastCalls = commaParser[commaParserHex.length-4];
+  lastCalls = commaParser[commaParser.length - lastCallsIndexFromEnd];
   lastCallsLines = lastCalls.split('\n');
   if (onLoad) {
     updateLastCalls(lastCallsLines);
@@ -272,21 +345,9 @@ socket.on('unidenText', function(data) {
 
   /* banks */
   var bnkNum = 10; /* 10 banks: 1-(1)0 */
-  for (var i = 0; i < bnkNum; i++) {
-    /* dirty hack to get zero at the end */
-    if (i == 9) {
-      if (commaParserHex[12].includes('30')) { 
-        bottomLine += '0';
-      } else {
-        bottomLine += ' ';
-      }
-    } else {
-      if (commaParserHex[12].includes((31 + i).toString())) { 
-        bottomLine += (i + 1).toString();
-      } else {
-        bottomLine += ' ';
-      }
-    }
+  lineToParse = commaParserHex[12].replace("cdcecf", "").replace("c5c6c7", ""); /* Replace for: BNK: and SRCH: */
+  for(var i = 0; i < lineToParse.length/2; i++) {
+    bottomLine += String.fromCharCode(parseInt(lineToParse.slice(i*2, i*2+2), 16).toString());
   }
 
   /* volume */
@@ -340,8 +401,9 @@ socket.on('unidenText', function(data) {
     $('#sigMod').text(sigMod);
 
     /* cpu params */
-    $('#cpuLoad').text("CPU load: " + parseInt(commaParserHex[commaParserHex.length-2], 16) + '%');       // 23
-    $('#cpuTemp').text("CPU temp: " + parseInt(commaParserHex[commaParserHex.length-1], 16) + '\u00B0C'); // 24
+    $('#cpuLoad').text("CPU load: " + parseInt(commaParserHex[commaParserHex.length - cpuLoadIndexFromEnd], 16) + '%');
+    $('#cpuTemp').text("CPU temp: " + parseInt(commaParserHex[commaParserHex.length - cpuTempIndexFromEnd], 16) + '\u00B0C');
+    $('#wifiStatus').text("Wifi status: " + commaParser[commaParser.length - wifiStatusIndexFromEnd]);
 
   }, delayMs.toString());
 });

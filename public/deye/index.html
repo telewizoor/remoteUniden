@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <!--link rel="icon" type="image/x-icon" href="/favicon.ico"-->
+    <title>Deye Inverter</title>
+  </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.3/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.1.2/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<body>
+  <!--button onclick="refreshButton()">Refresh Deye Status</button>
+  <button onclick="refreshSwStatus()">Pobierz dane o stratach własnych</button-->
+
+  <center>
+    </br>
+    <button onclick="debugButton()">Debug button</button>
+    <div id="deyeMain" class="grid-container-deye-main">
+      <div id="deyeMainHeader" class="deye-container-deye-main-header">Deye status</div>
+      <div id="deyeMainLeftTop" class="deyeMainValue" onclick="showSubStatus('solar')">PV1 Power: 0.00W<br>PV2 Power: 0.00W</div> 
+      <div id="deyeMainRightTop" class="deyeMainValue" onclick="showSubStatus('grid')">Total Grid Power:<br>0.00W</div> 
+      <div id="deyeMainLeftBot" class="deyeMainValue" onclick="showSubStatus('battery')">Battery Power: 0.0W<br>Battery SOC: 0.00%</div> 
+      <div id="deyeMainRightBot" class="deyeMainValue" onclick="showSubStatus('load')">Total Load Power:<br>0.0W</div> 
+    </div>
+    </br>
+    <div id="deyeSubStatus" class=""></div>
+    </br>
+
+    <form action="javascript:;" onsubmit=" requestChartData( this ) ">  
+      <label for="entryName">Wybierz wartość:</label>
+      <select name="entryName" id="entryName">
+        <option value="PV1_Power">PV1 Power</option>
+        <option value="PV2_Power">PV2 Power</option>
+        <option value="PV1_Voltage">PV1 Voltage</option>
+        <option value="PV2_Voltage">PV2 Voltage</option>
+        <option value="PV1_Current">PV1 Current</option>
+        <option value="PV2_Current">PV2 Current</option>
+        <option value="Daily_Production">Daily Production</option>
+        <option value="Total_Production">Total Production</option>
+        <option value="Daily_Battery_Charge">Daily Battery Charge</option>
+        <option value="Daily_Battery_Discharge">Daily Battery Discharge</option>
+        <option value="Total_Battery_Charge">Total Battery Charge</option>
+        <option value="Total_Battery_Discharge">Total Battery Discharge</option>
+        <option value="Battery_Power">Battery Power</option>
+        <option value="Battery_Voltage">Battery Voltage</option>
+        <option value="Battery_SOC">Battery SOC</option>
+        <option value="Battery_Current">Battery Current</option>
+        <option value="Battery_Temperature">Battery Temperature</option>
+        <option value="Total_Grid_Power">Total Grid Power</option>
+        <option value="Grid_Voltage_L1">Grid Voltage L1</option>
+        <option value="Grid_Voltage_L2">Grid Voltage L2</option>
+        <option value="Grid_Voltage_L3">Grid Voltage L3</option>
+        <option value="Internal_CT_L1_Power">Internal CT L1 Power</option>
+        <option value="Internal_CT_L2_Power">Internal CT L2 Power</option>
+        <option value="Internal_CT_L3_Power">Internal CT L3 Power</option>
+        <option value="External_CT_L1_Power">External CT L1 Power</option>
+        <option value="External_CT_L2_Power">External CT L2 Power</option>
+        <option value="External_CT_L3_Power">External CT L3 Power</option>
+        <option value="Daily_Energy_Bought">Daily Energy Bought</option>
+        <option value="Total_Energy_Bought">Total Energy Bought</option>
+        <option value="Daily_Energy_Sold">Daily Energy Sold</option>
+        <option value="Total_Energy_Sold">Total Energy Sold</option>
+        <option value="Total_Grid_Production">Total Grid Production</option>
+        <option value="Total_Load_Power">Total Load Power</option>
+        <option value="Load_L1_Power">Load L1 Power</option>
+        <option value="Load_L2_Power">Load L2 Power</option>
+        <option value="Load_L3_Power">Load L3 Power</option>
+        <option value="Load_Voltage_L1">Load Voltage L1</option>
+        <option value="Load_Voltage_L2">Load Voltage L2</option>
+        <option value="Load_Voltage_L3">Load Voltage L3</option>
+        <option value="Daily_Load_Consumption">Daily Load Consumption</option>
+        <option value="Total_Load_Consumption">Total Load Consumption</option>
+        <option value="Current_L1">Current L1</option>
+        <option value="Current_L2">Current L2</option>
+        <option value="Current_L3">Current L3</option>
+        <option value="Inverter_L1_Power">Inverter L1 Power</option>
+        <option value="Inverter_L2_Power">Inverter L2 Power</option>
+        <option value="Inverter_L3_Power">Inverter L3 Power</option>
+        <option value="DC_Temperature">DC Temperature</option>
+        <option value="AC_Temperature">AC Temperature</option>
+        <option value="Alert">Alert</option>
+      </select>
+      <select name="interval" id="interval">
+        <option value="3h">3h</option>
+        <option value="6h">6h</option>
+        <option value="12h">12h</option>
+        <option value="24h">24h</option>
+	      <option value="3d">3d</option>
+        <option value="7d">7d</option>
+      </select>
+      </br>
+    </br>
+      <input id="show" type="submit" value="Wyświetl" onclick="setSubmit(this)">
+      <input id="add" type="submit" value="Dodaj" onclick="setSubmit(this)">
+    </br></br>
+    Data:<input type="date" id="dateFilter" value="2024-02-09">
+    <input id="show" type="submit" value="Filtruj po dacie" onclick="setSubmit(this, true)">
+    </br>
+    </form>
+    </br>
+    </br>
+    <canvas id="deyeChart" style="height:100%;max-height:600px;min-height:300px;width:100%;max-width:600px;min-width:300px"></canvas>
+    </br></br></br></br></br></br></br></br></br></br></br></br></br></br></br></br></br>
+    <button onclick="debugButton()">Refresh Deye Status</button>
+  </center>
+
+  <div id="deyeData" class="deyeStatus">Deye data container</div>
+
+  <!--div id="swStatus" class="deyeStatus">Straty wlasne</div>
+  <div id="swStatusLog" class="deyeStatus">Straty wlasne LOG</div-->
+
+      <!--div id="deyeSolar" class="grid-container-deye-solar">
+      <div id="deyeSolarPower" class="deye-solar-header">Solar</div>
+      <div id="deyeSolarPower" class="deye-solar-power">Power: 0kWh</div>
+      <div id="upperText" class="deye-grid-value">Daily = 26.0kWh</div>
+      <div id="midLine" class="deye-grid-value">Total = 120.0kWh</div>
+      <div id="bottomLine" class="deye-grid-value">PV1-V: 10V</div>
+      <div id="sigPower" class="deye-grid-value">PV1-V: 10V</div>
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+      <div id="sigMod" class="deye-grid-value">PV1-V: 10V</div> 
+    </div>
+</br>
+    <div id="deyeBattery" class="grid-container-deye-battery">
+      <div id="deyeSolarPower" class="deye-battery-header">Battery</div>
+      <div id="upperText" class="deye-grid-value">Discharge</div>
+      <div id="midLine" class="deye-grid-value">SOC: 60%</div>
+      <div id="bottomLine" class="deye-grid-value">U: 52.68V</div>
+      <div id="sigPower" class="deye-grid-value">I: 0.23A</div>
+      <div id="sigMod" class="deye-grid-value">Power: 120W</div> 
+      <div id="sigMod" class="deye-grid-value">Temp: 14.0*C</div> 
+    </div>
+  </br>
+    <div id="deyeSolar" class="grid-container-deye-grid">
+      <div id="deyeSolarPower" class="deye-grid-header">Grid</div>
+      <div id="deyeGridBuyNow" class="deye-grid-left">Buy <br> 521W <br> 50.0Hz</div>
+      <div id="deyeSolarPower" class="deye-grid-right">Buy <br> Today = 2.8kWh <br> Total = 502.70kWh</div>
+      <div id="upperText" class="deye-grid-value">CT1: 119W</div>
+      <div id="midLine" class="deye-grid-value">LD1: 119W</div>
+      <div id="sigMod" class="deye-grid-value">SOLD:</div> 
+      <div id="sigPower" class="deye-grid-value">CT1: 119W</div>
+      <div id="sigMod" class="deye-grid-value">LD1: 119W</div> 
+      <div id="bottomLine" class="deye-grid-value">Today=17.3kWh</div>
+      <div id="sigMod" class="deye-grid-value">LD1: 119W</div> 
+      <div id="sigMod" class="deye-grid-value">LD1: 119WV</div>
+      <div id="sigMod" class="deye-grid-value">Total=27.0kWh</div> 
+      <div id="sigMod" class="deye-grid-value">L1: 234V</div> 
+      <div id="sigMod" class="deye-grid-value">L2: 231V</div>
+      <div id="sigMod" class="deye-grid-value">L4: 228V</div> 
+    </div-->
+
+</body>
+
+<script src="./deye/deyeClient.js"></script>
+
+</html>

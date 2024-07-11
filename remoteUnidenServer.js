@@ -3,17 +3,43 @@ var { exec } = require("child_process");
 var { execSync } = require("child_process");
 const { SerialPort } = require('serialport');
 const { DelimiterParser } = require('@serialport/parser-delimiter')
-var http = require('http').createServer( handler);
+var http = require('http').createServer(handler);
 var io = require('socket.io')(http, {
   cors: {
     origin: '*',
   }
 }); 
+const deye = require("./deye/deye.js");
 
+var deyeEnabled       = 1;
 var maxLastCalls      = 10;
-var unidenRefreshRate = 500;    /* ms */
-var lowPassFilter     = '4200'; /* Hz */
+var unidenRefreshRate = 250;    /* ms */
+var lowPassFilter     = '5000'; /* Hz */
 var highPassFilter    = '100';  /* Hz */
+var specChTimeout     = 2000;   /* ms - How long keep squelch for special channels */
+var normChTimeout     = 250;   /* ms - How long keep squelch for special channels */
+var squelchOffValue   = '1';
+var squelchOnValue    = '2';
+var recExt            = '.mp3';
+var denoise           = false;
+var denoise_factor    = 0.1;
+var recSaveDuration   = 8000; /* auto save recording longer than 10seconds */
+var password_hash     = 'a98c9070c527bed6f0904ff040800c1adff461a8bebb064350b1c5246847785a';
+
+var specChCounter = 0;
+var recDuration = 0;
+var lastCalls = [];
+var recNum = 0;
+var recording = 0;
+var cpuTemp = 0;
+var cpuLoad = 0;
+var wifiStatus = '';
+var prgSts = 0;
+var unidenPendingRequests = [];
+var unidenRequestsNotReady = 1;
+var unidenRetryCnt = 0;
+var unidenRetryCntMax = 3;
+var unidenReceiveBuffer = "";
 
 var serialPort = new SerialPort({
   path: "/dev/ttyACM0",
@@ -29,6 +55,8 @@ const parser = serialPort.pipe(new DelimiterParser({ delimiter: '\r' }))
 /* Uniden Buttons */
 var modelInfoCMD = Buffer.from('MDL\r');
 var currentStatusCMD = Buffer.from('STS\r');
+var prgCMD = Buffer.from('PRG\r');
+var exitPrg = Buffer.from('EPG\r');
 var buttonHoldPress = Buffer.from('KEY,H,P\r');
 var button1Press = Buffer.from('KEY,1,P\r');
 var button2Press = Buffer.from('KEY,2,P\r');
@@ -74,7 +102,8 @@ var buttonsDict = {
 };
 
 /* Connect to port 80 - HTTP serer */
-http.listen(80);
+console.log('listening on http port');
+http.listen(80, "0.0.0.0");
 
 /* Caught exceptions */
 process.on('uncaughtException', function(err) {
@@ -152,52 +181,130 @@ function handler (req, res) { //create server
     case "/unidenRecords/records.js" :
       returnHttpObject(req, res, '/public/unidenRecords/records.js', 'text/javascript');
     break;
+    case "/deye" :
+      returnHttpObject(req, res, '/public/deye/index.html', 'text/html');
+    break;
+    case "/deye/deyeClient.js" :
+      returnHttpObject(req, res, '/public/deye/deyeClient.js', 'text/javascript');
+    break;
     default:
       /* mostly records */
       var type = 'text/html';
       if (req.url.includes(".mp3")) {
         type = 'audio/mpeg';
       }
+      if (req.url.includes(".wav")) {
+        type = 'audio/x-wav';
+      }
       returnHttpObject(req, res, req.url, type);
     break;
   };
 }
 
+/* handler for socket.io Deye site requests */
+function handleDeyeSocket(socket) {
+  socket.on('deyeRefresh', function(arg) {
+
+  });
+
+  socket.on('deyeTest', function() {
+    try {
+      console.log('deye test function');
+      deye.test();
+    } catch {
+      console.log('deye busy');
+    }
+  });
+
+  socket.on('getChartData', function(entryName, interval) {
+    try {
+      //console.log('deye get chart data for: ' + entryName);
+      deye.getChartData(entryName, interval);
+    } catch {
+      console.log('deye busy');
+    }
+  });
+}
+
+function checkPassword( hash ) {
+  var ret = 0;
+  console.log('Received password hash: ' + hash);
+  if( hash != password_hash ) {
+    console.log( getTime() +  ': Wrong password!!!' );
+    ret = 0;
+  } else {
+    ret = 1;
+  }
+
+  return ret;
+}
+
 io.sockets.on('connection', function (socket) {// WebSocket Connection
   //console.log('socket connected');
 
-  socket.on('buttonPress', function(button) { //get light switch status from client
-    /* Read buttons from html page */
-    if (button in buttonsDict) {
-      try {
-        serialPort.write(buttonsDict[button], function(err, results) {
-          if (err) {
-            console.log('buttonPress Error: ' + err);
+  socket.on( 'unidenMain', function( password, cmd, data1, data2 ) {
+    if( checkPassword( password ) ) {
+      switch( cmd ) {
+      case 'buttonPress':
+        /* Read buttons from html page */
+        var button = data1;
+        if (button in buttonsDict) {
+          try {
+            serialPort.write(buttonsDict[button], function(err, results) {
+              if (err) {
+                console.log('buttonPress Error: ' + err);
+              }
+              if (results) {
+                console.log('buttonPress: ' + results);
+              }
+            });
+          } catch {
+            console.log('serial port: ERROR');
           }
-          if (results) {
-            console.log('buttonPress: ' + results);
-          }
-        });
-      } catch {
-        console.log('serial port: ERROR');
+        }
+        break;
+        case 'saveRecord':
+          /* save recording */
+          var recName = data1;
+          saveRecord(recName);
+          break;
+        case 'removeRecord':
+          /* remove recording */
+          var recName = data1;
+          removeRecord(recName);
+          break;
+        case 'getSavedRecords':
+          /* send recordings list */
+          var filter = data1;
+          io.emit('savedRecords', getSavedRecords(filter));
+          break;
+        case 'checkIfRecordsSaved':
+          /* check if records are on disk */
+          var table = data1;
+          io.emit('recordsSaved', checkIfRecordsSaved(table));
+          break;
+        case 'readChannelMem':
+          /* read channel info from memory */
+          unidenReadChannelMemory(1);
+          break;
+        case 'writeChannelMem':
+          /* write channels into memory */
+          var chList = data1;
+          unidenWriteChannelMemory( chList );
+          break;
+        case 'unidenSendCmd':
+          /* send cmd received from page */
+          var cmd = data1;
+          var prg = data2;
+          unidenSendCmdFromWeb(cmd, prg);
+          break;
       }
     }
   });
 
-  socket.on('saveRecord', function(recName) { 
-    /* save recording */
-    saveRecord(recName);
-  });
-
-  socket.on('removeRecord', function(recName) { 
-    /* remove recording */
-    removeRecord(recName);
-  });
-
-  socket.on('getSavedRecords', function(recName) { 
-    /* send recordings list */
-    io.emit('savedRecords', getSavedRecords());
-  });
+  if (deyeEnabled) {
+    handleDeyeSocket(socket);
+  }
 });
 
 function execShell(cmd) {
@@ -207,6 +314,10 @@ function execShell(cmd) {
   } catch (error) {
     console.log(error.message);
   }
+}
+
+function isFunction(functionToCheck) {
+  return functionToCheck && {}.toString.call(functionToCheck) === '[object Function]';
 }
 
 function saveRecord(name) {
@@ -219,9 +330,41 @@ function removeRecord(name) {
   execShell(cmd);
 }
 
-function getSavedRecords() {
+function getSavedRecords(filter) {
   var recs = fs.readdirSync(__dirname + '/saved_rec/');
+  if(filter != "*") {
+    var dateFilter = '_' + filter.toString().replaceAll('-', '_');
+    recs = recs.filter(function(s){
+        return ~s.indexOf(dateFilter);
+    });
+  }
+  /* sort by date */
+  /* CH054_ACC_Low_Z__JKR___130_8750MHz___2024_02_11_20_24_30.mp3 */
+  recs.sort(function(a,b) {
+    a = a.slice(37).slice(0,-4).split('_').join('');
+    b = b.slice(37).slice(0,-4).split('_').join('');
+    return a > b ? -1 : a < b ? 1 : 0;
+  });
   return recs;
+}
+
+function checkIfRecordsSaved(table) {
+  response = [];
+  try {
+    for( item in table ) {
+      response.push(table[item].toString());
+      if( fs.existsSync(__dirname + table[item].toString().replaceAll('/rec/', '/saved_rec/')) ) {
+        response.push(1);
+      } else {
+        response.push(0);
+      }
+    }
+  }
+  catch(err) {
+    console.log('checkIfRecordsSaved error: ' + err);
+  }
+
+  return response;
 }
 
 function numToUint8Array(num) {
@@ -260,15 +403,237 @@ function callToRecName(call, num, ext=1) {
   }
 
   if(ext==1) {
-    name = name + ".mp3";
+    name = name + recExt;
   }
 
   return name;
 }
 
+function unidenSetSquelch(val) {
+  try {
+    serialPort.write('SQL,' + val + '\r', function(err, results) {
+      if (err) {
+        console.log('SQL Error: ' + err);
+      }
+      if (results) {
+        //console.log('SQL: ' + results);
+      }
+    });
+  } catch {
+    console.log('serial port: ERROR');
+  }
+}
+
+function unidenReadChannelMemory(val) {
+  try {
+    unidenPendingRequests = [];
+    /* enter program mode */
+    unidenAddRequest(prgCMD);
+    for( i=1; i<=500; i++ ) {
+      unidenAddRequest('CIN,' + i + '\r');
+    }
+    /* exit program mode */
+    unidenAddRequest(exitPrg);
+    /* Return to scan mode */
+    unidenAddRequest(buttonsDict['scan']);
+    /* callback to send the response */
+    unidenAddRequest(unidenSendChannelInfo);
+    unidenReceiveBuffer = "";
+    /* mark requests as ready to send */
+    unidenRequestsNotReady = 0;
+    /* Send first reqeust */
+    unidenSendPendingRequests();
+  } catch(err) {
+    console.log('unidenReadChannelMemory: ' + err);
+  }
+}
+
+function unidenWriteChannelMemory( chList ) {
+  console.log('Writing channels: ' + chList);
+  unidenPendingRequests = [];
+  /* enter program mode */
+  unidenAddRequest(prgCMD);
+  /* add channel cmd one by one */
+  chListLines = chList.split('\n');
+  for( channel in chListLines ) {
+    unidenAddRequest(chListLines[channel] + '\r');
+  }
+  /* exit program mode */
+  unidenAddRequest(exitPrg);
+  /* Return to scan mode */
+  unidenAddRequest(buttonsDict['scan']);
+  /* mark requests as ready to send */
+  unidenRequestsNotReady = 0;
+  /* Send first reqeust */
+  unidenSendPendingRequests();
+}
+
+function unidenSendCmdFromWeb(cmd, prg) {
+  console.log("Sending cmd from web: " + cmd);
+  unidenPendingRequests = [];
+  if( prg ) {
+    /* enter program mode */
+    unidenAddRequest(prgCMD);
+  }
+  unidenAddRequest(cmd + '\r');
+  /* exit program mode */
+  if( prg ) {
+    unidenAddRequest(exitPrg);
+  }
+  /* Return to scan mode */
+  unidenAddRequest(buttonsDict['scan']);
+  /* mark requests as ready to send */
+  unidenRequestsNotReady = 0;
+  /* Send first reqeust */
+  unidenSendPendingRequests();
+}
+
+function unidenSendChannelInfo() {
+  io.emit('channelInfo', unidenReceiveBuffer);
+}
+
+function unidenReadCurrentStatus() {
+  /* Read current status from Uniden */
+  try {
+    serialPort.write(currentStatusCMD, function(err, results) {
+      if (err) {
+        console.log('err ' + err);
+      }
+      if (results) {
+        console.log('results ' + results);
+      }
+    });
+  } catch {
+    console.log('serial port: ERROR');
+  }
+}
+
+function unidenParseCurrentStatus(data) {
+  // parser.removeAllListeners('data');
+  //console.log(data)
+
+  /* Very dirty hack for not getting comma as that values :D That cause problem with parsing later on page side */
+  if( cpuLoad == 0x2c ) {
+    cpuLoad++;
+  }
+  if( cpuTemp == 0x2c ) {
+    cpuTemp++;
+  }
+  var cpuLoadArr = numToUint8Array(cpuLoad);
+  var cpuTempArr = numToUint8Array(cpuTemp);
+
+  handleLastCalls(data);
+
+  var comma = new Uint8Array(1);
+  comma[0] = 0x2c;
+
+  var htmlNewLine = new Uint8Array(1);
+  htmlNewLine[0] = 0x0a;
+
+  var enc = new TextEncoder(); // always utf-8
+
+  /* ArrayBuffer for last calls */
+  var lastCallsArr = new Uint8Array;
+
+  for (var i = 0; i < maxLastCalls; i++) {
+    lastCallsArr = _appendBuffer(lastCallsArr, enc.encode(lastCalls[i]));
+    lastCallsArr = _appendBuffer(lastCallsArr, htmlNewLine);
+  }
+
+  var wifiStatusArr = Buffer.from(wifiStatus);
+
+  var unidenData = new Uint8Array([
+    ...data,
+    ...comma,
+    ...lastCallsArr,
+    ...cpuLoadArr,
+    ...cpuTempArr,
+    ...comma,
+    ...wifiStatusArr
+  ]);
+
+  //console.log(unidenData)
+  /* send parsed data to http */
+  io.emit('unidenText', unidenData);
+}
+
+function unidenGetResponseHeader(data) {
+  var header = ''
+  try {
+    header = data.toString().split(',')[0];
+  }
+  catch {
+    header = 'N/A';
+  }
+  return header;
+}
+
+function unidenSendPendingRequests() {
+  /* Send pending requests */
+  if(unidenPendingRequests.length > 0) {
+    if(!unidenRequestsNotReady) {
+      if(typeof unidenPendingRequests[0] === 'function') {
+        console.log('calling callback: ' + unidenPendingRequests[0]);
+        unidenPendingRequests[0]();
+        unidenPendingRequests.shift();
+      } else {
+        unidenSendCmd(unidenPendingRequests[0]);
+      }
+    }
+  }
+}
+
+function unidenSendCmd(cmd) {
+  console.log('sending cmd to Uniden: ' + cmd);
+  serialPort.write(cmd, function(err, results) {
+    if (err) {
+      console.log('err ' + err);
+    }
+    if (results) {
+      console.log('results ' + results);
+    }
+  });
+}
+
+function unidenAddRequest(cmd) {
+  console.log('adding cmd: ' + cmd);
+  unidenRequestsNotReady = 1;
+  unidenRetryCnt = 0;
+  unidenPendingRequests.push(cmd)
+}
+
+/* TODO: ??? */
+function unidenRequestsReady() {
+  unidenRequestsNotReady = 0;
+}
+
+function isChannelSpecial(chNum) {
+  var isSpecial = false;
+  var specialChannels;
+
+  try {
+    specialChannels = fs.readFileSync(__dirname + '/special_channels.txt', 'utf8');
+  } catch(err) {
+    console.log(err);
+    console.log('blad odczytu special channels');
+  }
+
+  if (specialChannels.includes(chNum)) {
+    isSpecial = true;
+  }
+
+  // TODO: every channel above 200 is special
+  if(parseInt(chNum, 10) > 200) {
+    isSpecial = true;
+  }
+
+  return isSpecial;
+}
+
 function mergeRecords(name, num) {
   var files = '';
   var anyRecords = 0;
+  var chNum = name.slice(2).substring(0, 3);
 
   for (let i = 0; i < num; i++) {
     var fileName = __dirname + '/rec/' + callToRecName(name, i);
@@ -281,14 +646,26 @@ function mergeRecords(name, num) {
   }
 
   if (anyRecords) {
-    /* create script for merginf records into one, denoising and renaming */
-    var mergeCmd = 'sox ' + files + __dirname + '/rec/' + callToRecName(name, 999) + ' ';
+    /* create script for merging records into one, denoising and renaming */
+    var mergeCmd = 'sox ' + files + __dirname + '/rec/' + callToRecName(name, 999);// + ' norm ';
+
     outName = __dirname + '/rec/' + callToRecName(name, 999, 0);
-    var filterCmd = 'sudo sox ' + outName + '.mp3 ' + outName + '_filtered.mp3 lowpass ' + lowPassFilter + ' highpass ' + highPassFilter + ' ';
-    var replaceCmd = 'sudo mv ' + outName + '_filtered.mp3 ' + outName + '.mp3 ';
+    var filterCmd = 'sudo sox ' + outName + recExt + ' ' + outName + '_filtered' + recExt + ' lowpass ' + lowPassFilter + ' highpass ' + highPassFilter + ' ';
+    /* if denoising is active */
+    if (denoise) {
+      filterCmd += 'noisered ' + __dirname + '/noise.prof ' + denoise_factor + ' ';
+    }
+
+    var replaceCmd = 'sudo mv ' + outName + '_filtered' + recExt + ' ' + outName + recExt + ' ';
+
+    var autoSaveCmd = '';
+    console.log(recDuration + 'ms chNum: ' + chNum);
+    if (recDuration >= recSaveDuration && isChannelSpecial(chNum)) {
+      autoSaveCmd = "sudo cp " + outName + recExt + " " + __dirname + "/saved_rec/" + callToRecName(name, 999);
+    }
 
     var scriptName = __dirname + '/rec/merge.sh';
-    var createScript = 'sudo bash -c ' + "'" + 'echo -e \"' + mergeCmd + '\n' + filterCmd + '\n' + replaceCmd + '\n' + '\" >> ' + scriptName + "'";
+    var createScript = 'sudo bash -c ' + "'" + 'echo -e \"' + mergeCmd + '\n' + filterCmd + '\n' + replaceCmd + '\n' + autoSaveCmd + '\n' + '\" >> ' + scriptName + "'";
     
     /* remove old script first */
     try {
@@ -303,13 +680,15 @@ function mergeRecords(name, num) {
       console.log('merge script doesnt exists');
     }
 
-    //console.log(createScript);
+    /* create script */
+    console.log(createScript);
     try {
       execSync(createScript, { stdio: 'ignore' });
     } catch (error) {
       console.log(error.message);
     }
 
+    /* make script executable */
     cmd = 'sudo chmod +x ' + scriptName;
     //console.log(cmd);
     try {
@@ -318,8 +697,9 @@ function mergeRecords(name, num) {
       console.log(error.message);
     }
 
+    /* run script */
     cmd = 'sudo ' + scriptName + ' &';
-    console.log(cmd);
+    //console.log(cmd);
     try {
       execSync(cmd, { stdio: 'ignore' });
     } catch (error) {
@@ -327,10 +707,6 @@ function mergeRecords(name, num) {
     }
   }
 }
-
-var lastCalls = [];
-var recNum = 0;
-var recording = 0;
 
 function handleLastCalls(receivedData) {
   try {
@@ -374,24 +750,55 @@ function handleLastCalls(receivedData) {
       sigPower = '5/5';
     }
 
-    /* squelch */
-    if (sigPower != '0/5') {
-      squelch = 1;
+    /* Reset timer when signal appeared again */
+    /* != 0/5 for special channels */
+    if (sigPower != '0/5' && isChannelSpecial(channelNum.slice(2))) {
+      specChCounter = 0;
     }
 
+    /* > 1/5 for normal channels */
+    if (sigPower != '0/5' && sigPower != '1/5' && !isChannelSpecial(channelNum.slice(2))) {
+      specChCounter = 0;
+    }
+
+    /* squelch */
     squelch = parseInt(commaParser[14]);
 
     var lastCall = "empty";
 
     if (squelch == 1) {
+      /* measure recording time */
+      recDuration += unidenRefreshRate;
+
       //console.log(squelch + ' ' + channelNum);
       if (channelNum.includes("CH") && !recording) {
         lastCall = channelNum + ' ' + upperLine + ' ' + frequency + 'MHz';
       }
+
+      /* Check if channel is special and counter is below threshold */
+      if (isChannelSpecial(channelNum.slice(2))) {
+        if (specChCounter < specChTimeout) {
+          /* still recording, bump up special channel counter */
+          specChCounter += unidenRefreshRate;
+        } else {
+          //console.log('return squelch to 2');
+          unidenSetSquelch(squelchOnValue);
+        }
+      } else {
+        /* normal channel */
+        if (specChCounter < normChTimeout) {
+          /* still recording, bump up special channel counter */
+          specChCounter += unidenRefreshRate;
+        } else {
+          //console.log('return squelch to 2');
+          unidenSetSquelch(squelchOnValue);
+        }
+      }
     } else {
       recording = 0;
       /* stop every recording */
-      var cmd = "sudo pkill svar";
+      //var cmd = "sudo pkill svar";
+      var cmd = "sudo pkill rec";
       //console.count("Killing recorder!");
       try {
         execSync(cmd, { stdio: 'ignore' });
@@ -421,12 +828,27 @@ function handleLastCalls(receivedData) {
           lastCallWithDate = lastCall + ' | ' + getTime().toString();
           lastCalls.push(lastCallWithDate);
           recNum = 0;
+          recDuration = 0;
         }
+
         /* start recording */
-        if (!recording) {
+        if (!recording) { 
+          /* if special, turn off squelch for specChTimeout time */
+          //if (isChannelSpecial(channelNum.slice(2))) {
+            specChCounter = 0;
+            //console.log(channelNum.slice(2) + ' special/norm counter = 0, turn off squelch');
+            unidenSetSquelch(squelchOffValue);
+          //}
           recording = 1;
           //var cmd = 'rec ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum) + ' silence -l 1 0.3 3% 1 1.0 0.5% trim 0 180 > /dev/null 2>&1 &'; // > /dev/null 2>&1 &
-          var cmd = 'sudo svar ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + ' -o MP3 -f 99999 &';
+          
+          if (recExt == '.mp3') {
+            //var cmd = 'sudo svar ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + ' -l 1 -o MP3 -f 99999 &';
+            var cmd = 'sudo rec ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + recExt + ' &';
+          } else if (recExt == '.wav') {
+            //var cmd = 'sudo svar ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + ' -l 1 -f 99999 &';
+            var cmd = 'sudo rec ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + recExt + ' &';
+          }
           recNum++;
           //console.log(cmd);
           try {
@@ -449,9 +871,6 @@ function handleLastCalls(receivedData) {
 
   //console.log(lastCalls);
 }
-
-var cpuTemp = 0;
-var cpuLoad = 0;
 
 function getCpuTemp() {
   var temp;
@@ -487,6 +906,22 @@ function getCpuLoad() {
   //console.log(`CPU load: ${cpuLoad}`);
 }
 
+function getWifiStatus() {
+  exec("iwconfig wlan0 | grep Link &", (error, stdout, stderr) => {
+    if (error) {
+        console.log(`getWifiStatus error: ${error.message}`);
+        return;
+    }
+    if (stderr) {
+        console.log(`getWifiStatus stderr: ${stderr}`);
+        return;
+    }
+    SSID = stdout.split('ESSID:"')[1].split('"')[0];
+    Quality = stdout.split('Link Quality=')[1].split(' ')[0];
+    wifiStatus = SSID + " | Quality: " + Quality;
+  });
+}
+
 var _appendBuffer = function(buffer1, buffer2) {
   var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
   tmp.set(new Uint8Array(buffer1), 0);
@@ -494,74 +929,90 @@ var _appendBuffer = function(buffer1, buffer2) {
   return tmp;
 };
 
-var cnt5s = 0;
-getCpuLoad();
-getCpuTemp();
+/* 5 second task */
+setInterval(function() {
+  /* get CPU load and temp every 5 seconds */
+  getCpuLoad();
+  getCpuTemp();
+  getWifiStatus();
+}, 5000);
 
 setInterval(function() {
-  //console.log("1s timer...")
-
-  /* Read current status from Uniden */
-  try {
-    serialPort.write(currentStatusCMD, function(err, results) {
-      if (err) {
-        console.log('err ' + err);
-      }
-      if (results) {
-        console.log('results ' + results);
-      }
-    });
-  } catch {
-    console.log('serial port: ERROR');
+  /* read current status from Uniden every unidenRefreshRate miliseconds */
+  if(unidenPendingRequests.length == 0) {
+    unidenReadCurrentStatus();
   }
-
-
-  /* get CPU load and temp every 5 seconds */
-  cnt5s++;
-  if (cnt5s > (5000 / unidenRefreshRate)) {
-    cnt5s = 0;
-    getCpuLoad();
-    getCpuTemp();
-  }
-
-  /* Read last line and send it to socket io */
-  parser.on('data', data => {
-    parser.removeAllListeners('data');
-    //console.log(data)
-
-    var cpuLoadArr = numToUint8Array(cpuLoad);
-    var cpuTempArr = numToUint8Array(cpuTemp);
-
-    handleLastCalls(data);
-
-    var comma = new Uint8Array(1);
-    comma[0] = 0x2c;
-
-    var htmlNewLine = new Uint8Array(1);
-    htmlNewLine[0] = 0x0a;
-
-    var enc = new TextEncoder(); // always utf-8
-
-    /* ArrayBuffer for last calls */
-    var lastCallsArr = new Uint8Array;
-
-    for (var i = 0; i < maxLastCalls; i++) {
-      lastCallsArr = _appendBuffer(lastCallsArr, enc.encode(lastCalls[i]));
-      lastCallsArr = _appendBuffer(lastCallsArr, htmlNewLine);
-    }
-
-    //console.log(lastCallsArr);
-
-    var unidenData = new Uint8Array([
-      ...data,
-      ...comma,
-      ...lastCallsArr,
-      ...comma,
-      ...cpuLoadArr,
-      ...cpuTempArr
-    ]);
-
-    //console.log(unidenData)
-    io.emit('unidenText', unidenData);
-  });
 }, unidenRefreshRate);
+
+setInterval(function() {
+  //unidenSendPendingRequests();
+}, 25);
+
+/* Read last line and send it to socket io */
+parser.on('data', data => {
+  var receivedData = data;
+  var responseHeader = unidenGetResponseHeader(receivedData)
+
+  /* update remote mode status if not actual */
+  if(receivedData.includes("Remote Mode") && !prgSts) {
+    prgSts = 1;
+    console.log('remote mode');
+  }
+
+  /* if received data contains last requests header and the response is ok, clear pending request */
+  if(!unidenRequestsNotReady && unidenPendingRequests.length > 0) {
+    if(unidenPendingRequests[0].includes(responseHeader)) {
+      if(!receivedData.includes('ERR') && !receivedData.includes('NG')) {
+        unidenPendingRequests.shift();
+      } else {
+        unidenRetryCnt++;
+        if(unidenRetryCnt > unidenRetryCntMax) {
+          unidenPendingRequests.shift();
+          unidenRetryCnt = 0;
+        }
+      }
+      console.log('received ' + receivedData + ' - sending next req');
+      unidenSendPendingRequests();
+    }
+  }
+
+  switch(responseHeader) {
+    case 'STS':
+      unidenParseCurrentStatus(data);
+      //unidenSendCmd('EPG\r');
+      break;
+    case 'PRG':
+      /* PRG OK */
+      console.log('PRG: ' + receivedData);
+      if(receivedData.includes("OK")) {
+        prgSts = 1;
+      } else {
+        prgSts = 0;
+      }
+      break;
+    case 'EPG':
+      /* EPG OK */
+      if(receivedData.includes("OK")) {
+        prgSts = 0;
+        //unidenSendCmd(buttonsDict['hold']);
+      }
+      break;
+    case 'N/A':
+      console.log("invalid message N/A");
+      break;
+    default:
+      console.log("not handled header: " + receivedData.toString());
+      unidenReceiveBuffer += receivedData.toString() + '\n';
+      break;
+  }
+});
+
+if (deyeEnabled) {
+  function ioSend(data, arg) {
+    io.emit(data, arg);
+  }
+
+  exports.ioSend = ioSend;
+  exports.getTime = getTime;
+  exports.execSync = execSync;
+}
