@@ -1,0 +1,324 @@
+.debugInfo { 
+  grid-area: debug; 
+  display: none; 
+  white-space: pre-wrap; 
+  font-family:'Lucida Console', monospace; 
+}
+.upperText { grid-area: header; white-space: pre-wrap; }
+.upMidLine { grid-area: up-bot; white-space: pre-wrap; }
+.midLine { grid-area: mid-left; white-space: pre-wrap; }
+.bottomLine { font-family:'Lucida Console', monospace; grid-area: footer; white-space: pre-wrap; }
+.sigPower { grid-area: bot-right; white-space: pre-wrap; }
+.sigMod { grid-area: bot-left; white-space: pre-wrap; }
+
+.grid-container-status {
+  display: grid;
+  grid-template-areas:
+    'debug debug'
+    'header header'
+    'up-bot up-bot'
+    'mid-left mid-left'
+    'footer footer'
+    'bot-left bot-right';
+  gap: 2px;
+  background-color: #ffffff;
+  padding: 2px;
+  font-family:'Lucida Console', monospace;
+}
+
+.grid-container-status > div {
+  background-color: rgba(255, 255, 255, 1);
+  text-align: center;
+  padding: 4px 0;
+  font-size: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+}
+
+.grid-container-buttons {
+  display: inline-grid;
+  grid-template-columns: 72px 72px 72px 72px;
+  background-color: #bbbbbb;
+  padding: 2px;
+  column-gap: 2px;
+  row-gap: 2px;
+}
+
+.btn_black {
+  border: none;
+  background-color: rgba(0, 0, 0, 1);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 1);
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px;
+}
+
+.btn_white {
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px;
+}
+
+.btn_orange {
+  border: none;
+  background-color: rgb(255, 145, 0);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px;
+}
+
+.btn_black:hover {
+  font-weight: bold;
+  background-color: rgb(87, 87, 87);
+}
+
+.btn_white:hover {
+  font-weight: bold;
+  background-color: rgb(201, 201, 201);
+}
+
+.btn_orange:hover {
+  font-weight: bold;
+  background-color: rgb(255, 188, 43);
+}
+
+.lastCallsAudioLabels {
+  white-space: pre-wrap;       /* css-3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  font-family:'Lucida Console', monospace; 
+}
+
+.saveRec {
+  vertical-align: center;
+  width: 40px;
+  height: 40px;
+  padding-right: 32px;
+}
+
+.saveRec:hover {
+  cursor: pointer;
+}
+
+.deleteRec:hover {
+  cursor: pointer;
+}
+
+.prioChannels {
+  vertical-align: top;
+  text-align: center;
+  font-family:'Lucida Console', monospace;
+  font-size: 16px;
+  padding-left: 14px;
+  padding-right: 14px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.prioChannelsLabel {
+  vertical-align: 16px;
+  font-family:'Lucida Console', monospace;
+  font-size: 16px;
+}
+
+.deleteRec {
+  vertical-align: middle;
+  padding-bottom: 45px;
+}
+
+.deyeStatus {
+  white-space: pre-wrap;
+  font-family:'Lucida Console', monospace; 
+  line-height: 1.2;
+}
+
+#lastCalls
+{
+    white-space:pre-wrap;
+    line-height: 1.2;
+}
+
+
+.grid-container-deye-main {
+  display: grid;
+  grid-template-columns: 250px 250px;
+  gap: 2px;
+  background-color: #cacaca;
+  padding: 2px;
+  font-family:'Lucida Console', monospace;
+  width: 502px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.deye-container-deye-main-header {
+  grid-area: 1 / 1 / span 1 / span 2;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 24px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 10px;
+  height: 2rem;
+  line-height: 2rem;
+}
+
+.deyeMainValue {
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 15px;
+  color: rgb(0, 0, 0);
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: pre-wrap;
+}
+
+
+.grid-container-deye-grid {
+  display: grid;
+  grid-template-columns: 160px 160px 160px;
+  gap: 2px;
+  background-color: #cacaca;
+  padding: 2px;
+  font-family:'Lucida Console', monospace;
+  width: 484px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.deye-grid-header {
+  grid-area: 1 / 1 / span 1 / span 3;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 24px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 8px;
+  height: 2rem;
+  line-height: 2rem;
+}
+
+.deye-grid-left {
+  grid-area: 2 / 1 / span 2 / span 2;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 0px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.deye-grid-right {
+  grid-area: 2 / 3 / span 2 / 3;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 0px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+
+.grid-container-deye-battery {
+  display: grid;
+  grid-template-columns: 160px;
+  gap: 2px;
+  background-color: #cacaca;
+  padding: 2px;
+  font-family:'Lucida Console', monospace;
+  width: 160px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.deye-battery-header {
+  grid-area: 1 / 1 / span 1 / span 1;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 24px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 8px;
+  height: 2rem;
+  line-height: 2rem;
+}
+
+
+.grid-container-deye-solar {
+  display: grid;
+  grid-template-columns: 160px 160px;
+  gap: 2px;
+  background-color: #cacaca;
+  padding: 2px;
+  font-family:'Lucida Console', monospace;
+  width: 322px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  cursor: default;
+}
+
+.deye-solar-header {
+  grid-area: 1 / 1 / span 1 / span 2;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 24px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 8px;
+  height: 2rem;
+  line-height: 2rem;
+}
+
+.deye-solar-power {
+  grid-area: 2 / 1 / span 2 / span 1;
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  padding: 8px;
+  height: 3rem;
+  line-height: 3rem;
+}
+
+.deye-grid-value {
+  border: none;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 14px;
+  color: rgba(0, 0, 0, 1);
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px;
+}

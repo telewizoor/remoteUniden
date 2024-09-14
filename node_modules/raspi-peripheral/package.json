@@ -1,0 +1,50 @@
+{
+  "name": "raspi-peripheral",
+  "version": "3.0.4",
+  "description": "Provides a base class and pin management functions for the Raspi.js library suite",
+  "main": "dist/index.js",
+  "types": "./declarations/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^10.12.12",
+    "@types/raspi-board": "^5.2.0",
+    "coveralls": "^3.0.2",
+    "cross-env": "^5.2.0",
+    "istanbul": "^0.4.5",
+    "jasmine": "^3.3.0",
+    "tslint": "^5.9.1",
+    "typescript": "^3.2.1"
+  },
+  "dependencies": {
+    "j5-io-types": "^2.4.0",
+    "raspi": "^6.0.1",
+    "raspi-board": "^7.1.2"
+  },
+  "engines": {
+    "node": ">= 6.0.0"
+  },
+  "cpu": [
+    "arm",
+    "arm64"
+  ],
+  "scripts": {
+    "prebuild": "tslint 'src/**/*.ts'",
+    "build": "tsc",
+    "test": "cross-env RASPI_IO_TEST_MODE=true istanbul cover ./node_modules/jasmine/bin/jasmine.js --captureExceptions spec/*.spec.js && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "test-local": "cross-env RASPI_IO_TEST_MODE=true jasmine spec/*.spec.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nebrius/raspi-peripheral.git"
+  },
+  "keywords": [
+    "nodebots",
+    "robotics",
+    "raspberry pi"
+  ],
+  "author": "Bryan Hughes <bryan@nebri.us>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nebrius/raspi-peripheral/issues"
+  },
+  "homepage": "https://github.com/nebrius/raspi-peripheral"
+}

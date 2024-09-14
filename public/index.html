@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Radio Malina</title>
+  </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.3/socket.io.js"></script> <!-- include socket.io client side script -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+<body>
+  <center>
+  Password:
+  <input type="password" id="password" name="password" />
+  </center>
+  <!--input type="checkbox" onclick="delayCheckBoxPress(this)">Opóźnienie(wyrównanie z dźwiękiem)</input-->
+  <input type="checkbox" onclick="debugCheckBox(this)">Debug info</input>
+    <!--div id="unidenText"></div-->
+    <div id="grid-container-status" class="grid-container-status">
+      <div id="debugInfo" class="debugInfo">Debug info</div>
+      <div id="upperText" class="upperText">upperText</div>
+      <div id="upMidLine" class="upMidLine">upMidLine</div>
+      <div id="midLine" class="midLine">midLine</div>
+      <div id="bottomLine" class="bottomLine">bottomLine</div>
+      <div id="sigPower" class="sigPower">sigPower</div>
+      <div id="sigMod" class="sigMod">sigMod</div>  
+    </div>
+
+    <center>
+      <div class="grid-container-buttons">
+        <div class="btn_black" onclick="buttonPress('hold')">Hold</div>
+        <div class="btn_white" onclick="buttonPress('1')">1</div>
+        <div class="btn_white" onclick="buttonPress('2')">2</div>
+        <div class="btn_white" onclick="buttonPress('3')">3</div>
+        <div class="btn_black" onclick="buttonPress('scan')">Scan</div>
+        <div class="btn_white" onclick="buttonPress('4')">4</div>
+        <div class="btn_white" onclick="buttonPress('5')">5</div>
+        <div class="btn_white" onclick="buttonPress('6')">6</div>
+        <div class="btn_black" onclick="buttonPress('srch')">Srch</div>
+        <div class="btn_white" onclick="buttonPress('7')">7</div>
+        <div class="btn_white" onclick="buttonPress('8')">8</div>
+        <div class="btn_white" onclick="buttonPress('9')">9</div>
+        <div class="btn_black" onclick="buttonPress('lo')">L/O</div>
+        <div class="btn_black" onclick="buttonPress('pgm')">E/Pgm</div>
+        <div class="btn_white" onclick="buttonPress('0')">0</div>
+        <div class="btn_white" onclick="buttonPress('clr')">. Clr</div>
+        <div class="btn_black">-</div>
+        <div class="btn_white">Bear</div>
+        <div class="btn_white">cat</div>
+        <div class="btn_orange" onclick="buttonPress('func')">Func</div>
+        <div class="btn_black">-</div>
+        <div class="btn_white" onclick="buttonPress('<')"><</div>
+        <div class="btn_white" onclick="buttonPress('knob')">O</div>
+        <div class="btn_white" onclick="buttonPress('>')">></div>
+      </div>
+      </center>
+      BANK: 1, 2 - lotnictwo cywilne
+      <br />
+      BANK: 3 - ciekawe 2m, sstv, straz etc
+      <br />
+      BANK: 4-10 - wojsko
+  </br>
+
+  <div style="font-size: 24px; font-weight: bold;">Audio stream:</div>
+    <!--audio controls src="http://89.73.147.94:8000/Stream.mp3"></audio-->
+    <!--audio controls src="http://192.168.1.31:8000/Stream.mp3"></audio-->
+    <audio id="liveStream" controls src="">
+    </audio>
+  </br></br>
+    <div style="font-size: 24px; font-weight: bold;">Last calls:</div>
+    <div id="lastCalls" style="font-family:'Lucida Console', monospace"></div>
+  </br></br>
+    <input type="button" style="font-size: 16px" onclick="updateLastCallsButton()" value="Refresh recordings"></input>
+    <section id="lastCallsRecords"></section>
+  </br></br>
+  <a href="/unidenRecords">Saved recordings</a>
+  </br>
+  <a href="/deye">Deye</a>
+  </br>
+  <a href="https://globe.adsbexchange.com/?feed=6f3lE3CAusdc">ADSB Map</a>
+  </br>
+  <a href="http://telewizoor-malina.duckdns.org:90/tar1090/">Private ADSB</a>
+  </br>
+  <a href="http://telewizoor-malina.duckdns.org:90/tar1090/?pTracks">ADSB tracks</a>
+  </br></br>
+
+<div id="cpuLoad" style="font-family:'Lucida Console', monospace"></div>
+<div id="cpuTemp" style="font-family:'Lucida Console', monospace"></div>
+<div id="wifiStatus" style="font-family:'Lucida Console', monospace"></div>
+</br></br></br>
+<input type="button" onclick="readChannelMemButton()" value="Read channels from memory"></input>
+<input type="button" onclick="readPrioChannels()" value="Read prio channels"></input>
+<!--input type="button" style="font-size: 10px;" onclick="sendCmd()" value="Send CMD"></input-->
+<br /><br />
+<input type="file" id="file-input" />
+<input type="button" onclick="writeChannelMemButton()" value="Write channels to memory"></input>
+<div id="debugTxt" style="font-family:'Lucida Console', monospace; white-space: pre-wrap;"></div>
+</body>
+
+<script src="./uniden.js"></script>
+
+</html>
