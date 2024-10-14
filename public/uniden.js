@@ -1,14 +1,18 @@
 var curUrl = window.location.href;
 
 /* Remove port from the URL */
-if( curUrl.includes(':') ) {
+if( curUrl.split(':').length > 2 ) {
   var curUrl = curUrl.substr(0, curUrl.lastIndexOf(":"));
 }
 
 /* Get subpage(if used) */
+/* Cut last slash */
+if(curUrl[curUrl.length - 1] == '/') {
+  curUrl = curUrl.slice(0, -1);
+}
 var subpage = curUrl.substring(curUrl.lastIndexOf('/') + 1);
 /* Some dirty hack to check if it is real subpage */
-if( curUrl.includes(subpage) ) {
+if( subpage.includes('.') ) {
   subpage = '';
 }
 
@@ -31,11 +35,11 @@ var wifiStatusIndexFromEnd =  1; //26;
 
 document.body.onload = createLastCalls();
 
-/* Cut last slash */
-if(curUrl[curUrl.length - 1] == '/') {
-  curUrl = curUrl.slice(0, -1);
+if( subpage == "" ) {
+  document.body.onload = changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
+} else {
+  document.body.onload = changeAudio('liveStream', curUrl + 'ic/Stream.mp3');
 }
-document.body.onload = changeAudio('liveStream', curUrl + subpage + ':8000/Stream.mp3');
 
 function readSingleFile(e) {
   var file = e.target.files[0];
