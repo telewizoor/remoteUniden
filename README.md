@@ -39,21 +39,28 @@ Installing required packages:
 
     sudo apt-get install git
     sudo apt-get install nodejs
-    sudo apt-get install icecast2
+    sudo apt-get install npm
     sudo apt-get install sox
     sudo apt-get install libsox-fmt-mp3
+    sudo apt-get install icecast2
 
 Configure icecast2 - **remember choosen password!**:
 
     hostname: remoteUniden
     password: password
 
+Create some folder for everything:
+    
+    mkdir Project
+    cd Project
+
 Install darkice for audio stream:
 
     sudo apt-get install darkice
     mkdir darkice
-    touch darkice/darkice.cfg
-    touch darkice/darkice.sh
+    cd darkice
+    touch darkice.cfg
+    touch darkice.sh
     chmod +x darkice.sh
 
 Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
@@ -75,7 +82,7 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
     bitrateMode     = cbr       # average bit rate
     format          = mp3       # format of the stream: ogg vorbis
     bitrate         = 320       # bitrate of the stream sent to the server
-    server          = 192.168.1.30 # host name of the server
+    server          = 0.0.0.0 # host name of the server
     port            = 8000      # port of the IceCast2 server, usually 8000
     password        = password       # source password to the IceCast2 server
     mountPoint      = Stream.mp3  # mount point of this stream on the IceCast2 server
@@ -87,7 +94,7 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
 
 Edit darkice.sh(sudo nano darkice/darkice.sh):
 
-    sudo /usr/bin/darkice -c /home/username/darkice/darkice.cfg
+    sudo /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
 
 Configure audio input:
 
@@ -99,11 +106,15 @@ Clone this repo:
 
     git clone https://github.com/telewizoor/remoteUniden.git
 
+Install nodejs packages:
+
+    npm install package.json
+
 And configure system to run darkice and remoteUniden server:
 
     crontab -e
-    @reboot sleep 12 && sudo /home/username/darkice/darkice.sh
-    @reboot sleep 15 && sudo /home/username/remoteUniden/start.sh
+    @reboot sleep 12 && sudo /home/${USER}/darkice/darkice.sh
+    @reboot sleep 15 && sudo /home/${USER}/remoteUniden/start.sh
 
 For test run without reboot. Run darkice:
 
