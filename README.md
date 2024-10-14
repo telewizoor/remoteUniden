@@ -113,8 +113,8 @@ Install nodejs packages:
 And configure system to run darkice and remoteUniden server:
 
     crontab -e
-    @reboot sleep 12 && sudo /home/${USER}/darkice/darkice.sh
-    @reboot sleep 15 && sudo /home/${USER}/remoteUniden/start.sh
+    @reboot sleep 12 && sudo /home/${USER}/Project/darkice/darkice.sh
+    @reboot sleep 15 && sudo /home/${USER}/Project/remoteUniden/start.sh
 
 For test run without reboot. Run darkice:
 
