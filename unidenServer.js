@@ -1,5 +1,5 @@
 var fs = require("fs");
-process.env.NODE_CONFIG_DIR = __dirname + '/config';
+process.env.NODE_CONFIG_DIR = __dirname + "/config";
 const config = require("config");
 var { exec } = require("child_process");
 var { execSync } = require("child_process");
@@ -29,29 +29,22 @@ var pageRefreshRate = config.get("uniden.pageRefreshRate");
 var unidenRefreshRate = config.get("uniden.unidenRefreshRate");
 var lowPassFilter = config.get("uniden.lowPassFilter"); /* Hz */
 var highPassFilter = config.get("uniden.highPassFilter"); /* Hz */
-var specChTimeout = config.get(
-  "uniden.specChTimeout"
-); /* ms - How long keep squelch for special channels */
-var normChTimeout = config.get(
-  "uniden.normChTimeout"
-); /* ms - How long keep squelch for special channels */
+var specChTimeout = config.get("uniden.specChTimeout"); /* ms - How long keep squelch for special channels */
+var normChTimeout = config.get("uniden.normChTimeout"); /* ms - How long keep squelch for special channels */
+var maxRecDuration = config.get("uniden.maxRecDuration"); /* max rec duration to skip eg. random noises */
 var squelchOffValue = config.get("uniden.squelchOffValue");
 var squelchOnValue = config.get("uniden.squelchOnValue");
 var recExt = config.get("uniden.recExt");
 var denoise = config.get("uniden.denoise");
 var denoiseFactor = config.get("uniden.denoiseFactor");
-var recSaveDuration = config.get(
-  "uniden.recSaveDuration"
-); /* auto save recording longer than x seconds */
+var recSaveDuration = config.get("uniden.recSaveDuration"); /* auto save recording longer than x seconds */
 var specialChStart = config.get("uniden.specialChStart");
 var prioChannelsCount = config.get("uniden.prioChannelsCount");
 var channelsInBank = config.get("uniden.channelsInBank");
 var prioBanks = config.get("uniden.prioBanks");
 var passwordHash = config.get("uniden.passwordHash");
 var telegramChannelId = config.get("telegram.telegramChannelId");
-var telegramKeyWords = config.get(
-  "telegram.telegramKeyWords"
-); /* will be loaded from file telegramKeyWords.txt */
+var telegramKeyWords = config.get("telegram.telegramKeyWords"); /* will be loaded from file telegramKeyWords.txt */
 var telegramKeyWordsFileName = config.get("telegram.telegramKeyWordsFileName");
 const telegramBotToken = config.get("telegram.telegramBotToken");
 
@@ -84,7 +77,7 @@ const parser = serialPort.pipe(new DelimiterParser({ delimiter: "\r" }));
 
 // Create a bot that uses 'polling' to fetch new updates
 //if(telegramBotToken != "") {
-  const bot = new telegramBot(telegramBotToken, { polling: false });
+const bot = new telegramBot(telegramBotToken, { polling: false });
 //}
 
 /* Uniden Buttons */
@@ -153,19 +146,7 @@ function getTime() {
   // current seconds
   let seconds = ("0" + date_ob.getSeconds()).slice(-2);
 
-  return (
-    year +
-    "-" +
-    month +
-    "-" +
-    date +
-    " " +
-    hours +
-    ":" +
-    minutes +
-    ":" +
-    seconds
-  );
+  return year + "-" + month + "-" + date + " " + hours + ":" + minutes + ":" + seconds;
 }
 
 /* Connect to port 80 - HTTP serer */
@@ -199,7 +180,8 @@ function returnHttpObject(req, res, fileName, contentType) {
 function handler(req, res) {
   //create server
   // console.log(req.url);
-  switch (req.url) {
+  /* Ignore everything after '?' sign */
+  switch (req.url.split('?')[0].replace(subpage, '')) {
     case "/style.css":
       returnHttpObject(req, res, "/public/style.css", "text/css");
       break;
@@ -219,20 +201,10 @@ function handler(req, res) {
       returnHttpObject(req, res, "/public/index.html", "text/html");
       break;
     case "/unidenRecords":
-      returnHttpObject(
-        req,
-        res,
-        "/public/unidenRecords/index.html",
-        "text/html"
-      );
+      returnHttpObject(req, res, "/public/unidenRecords/index.html", "text/html");
       break;
     case "/unidenRecords/records.js":
-      returnHttpObject(
-        req,
-        res,
-        "/public/unidenRecords/records.js",
-        "text/javascript"
-      );
+      returnHttpObject(req, res, "/public/unidenRecords/records.js", "text/javascript");
       break;
     default:
       /* mostly records */
@@ -247,7 +219,7 @@ function handler(req, res) {
         type = "";
       }
       if (type != "") {
-        returnHttpObject(req, res, req.url, type);
+        returnHttpObject(req, res, req.url.replace(subpage, ''), type);
       }
       break;
   }
@@ -347,20 +319,11 @@ function execShell(cmd) {
 }
 
 function isFunction(functionToCheck) {
-  return (
-    functionToCheck && {}.toString.call(functionToCheck) === "[object Function]"
-  );
+  return functionToCheck && {}.toString.call(functionToCheck) === "[object Function]";
 }
 
 function saveRecord(name) {
-  var cmd =
-    "sudo cp " +
-    __dirname +
-    name +
-    " " +
-    __dirname +
-    "/saved_rec" +
-    name.slice(4);
+  var cmd = "sudo cp " + __dirname + name + " " + __dirname + "/saved_rec" + name.slice(4);
   execShell(cmd);
 }
 
@@ -403,11 +366,7 @@ function checkIfRecordsSaved(table) {
   try {
     for (item in table) {
       response.push(table[item].toString());
-      if (
-        fs.existsSync(
-          __dirname + table[item].toString().replaceAll("/rec/", "/saved_rec/")
-        )
-      ) {
+      if (fs.existsSync(__dirname + table[item].toString().replaceAll("/rec/", "/saved_rec/"))) {
         response.push(1);
       } else {
         response.push(0);
@@ -440,9 +399,7 @@ function arrayBufferToString(buffer) {
 
 function buf2hex(buffer) {
   // buffer is an ArrayBuffer
-  return [...new Uint8Array(buffer)]
-    .map((x) => x.toString(16).padStart(2, "0"))
-    .join("");
+  return [...new Uint8Array(buffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 function callToRecName(call, num, ext = 1) {
@@ -561,11 +518,7 @@ function unidenReadPrioChannels() {
     /* enter program mode */
     unidenAddRequest(prgCMD);
     var prioChannelsStart = prioBanks[0] * channelsInBank + 1 - channelsInBank;
-    for (
-      i = prioChannelsStart;
-      i < prioChannelsStart + prioChannelsCount;
-      i++
-    ) {
+    for (i = prioChannelsStart; i < prioChannelsStart + prioChannelsCount; i++) {
       unidenAddRequest("CIN," + i + "\r");
     }
     /* exit program mode */
@@ -619,8 +572,7 @@ function unidenAddToPrio() {
   // unidenAddRequest(prgCMD);
   /* add channel to all prio banks */
   for (bank in prioBanks) {
-    var prioChNum =
-      prioBanks[bank] * channelsInBank + 1 - channelsInBank + (prioNum - 1);
+    var prioChNum = prioBanks[bank] * channelsInBank + 1 - channelsInBank + (prioNum - 1);
     var cmd = "CIN," + prioChNum + chInfo.slice(7, chInfo.length - 1); // remove 'CIN,XXX' and new line at the end
     // console.log( cmd );
     if (bank == 0) {
@@ -795,8 +747,7 @@ function mergeRecords(name, num) {
   /* If there are any records to merge */
   if (anyRecords) {
     /* create script for merging records into one, denoising and renaming */
-    var mergeCmd =
-      "sox " + files + __dirname + "/rec/" + callToRecName(name, 999); // + ' norm ';
+    var mergeCmd = "sox " + files + __dirname + "/rec/" + callToRecName(name, 999); // + ' norm ';
 
     outName = __dirname + "/rec/" + callToRecName(name, 999, 0);
     var filterCmd =
@@ -814,31 +765,15 @@ function mergeRecords(name, num) {
       " ";
     /* if denoising is active */
     if (denoise) {
-      filterCmd +=
-        "noisered " + __dirname + "/noise.prof " + denoiseFactor + " ";
+      filterCmd += "noisered " + __dirname + "/noise.prof " + denoiseFactor + " ";
     }
 
-    var replaceCmd =
-      "sudo mv " +
-      outName +
-      "_filtered" +
-      recExt +
-      " " +
-      outName +
-      recExt +
-      " ";
+    var replaceCmd = "sudo mv " + outName + "_filtered" + recExt + " " + outName + recExt + " ";
 
     var autoSaveCmd = "";
     // console.log(recDuration + 'ms chNum: ' + chNum);
-    if (recDuration >= recSaveDuration && (isChannelSpecial(chNum) || name.includes('SSTV') || name.includes('ISS'))) {
-      autoSaveCmd =
-        "sudo cp " +
-        outName +
-        recExt +
-        " " +
-        __dirname +
-        "/saved_rec/" +
-        callToRecName(name, 999);
+    if (recDuration >= recSaveDuration && (isChannelSpecial(chNum) || name.includes("SSTV") || name.includes("ISS"))) {
+      autoSaveCmd = "sudo cp " + outName + recExt + " " + __dirname + "/saved_rec/" + callToRecName(name, 999);
     }
 
     var scriptName = __dirname + "/rec/merge.sh";
@@ -899,7 +834,7 @@ function mergeRecords(name, num) {
   }
 
   // Send Telegram notification
-  if(telegramBotToken != "") {
+  if (telegramBotToken != "") {
     sendTelegramMessage(name + ": " + recDuration / 1000 + "s");
   }
 }
@@ -951,11 +886,7 @@ function handleLastCalls(receivedData) {
     }
 
     /* > 1/5 for normal channels */
-    if (
-      sigPower != "0/5" &&
-      sigPower != "1/5" &&
-      !isChannelSpecial(channelNum.slice(2))
-    ) {
+    if (sigPower != "0/5" && sigPower != "1/5" && !isChannelSpecial(channelNum.slice(2))) {
       noSquelchCounter = 0;
     }
 
@@ -992,6 +923,12 @@ function handleLastCalls(receivedData) {
           unidenSetSquelch(squelchOnValue);
         }
       }
+
+      /* Check if recording is not too long(eg. some random noise) */
+      if (recDuration > maxRecDuration && maxRecDuration > 0) {
+        /* Skip that channel */
+        unidenSendCmd(buttonsDict[">"]);
+      }
     } else {
       recording = 0;
       /* stop every recording */
@@ -1010,19 +947,9 @@ function handleLastCalls(receivedData) {
     try {
       if (lastCall != "empty") {
         /* if current call is not currently lust call on the list */
-        if (
-          !lastCalls[lastCalls.length - 1]
-            .toString()
-            .split("|")[0]
-            .includes(lastCall)
-        ) {
+        if (!lastCalls[lastCalls.length - 1].toString().split("|")[0].includes(lastCall)) {
           if (lastCalls.length >= maxLastCalls) {
-            var cmd =
-              "sudo rm " +
-              __dirname +
-              "/rec/" +
-              callToRecName(lastCalls[0], 999).slice(0, -4) +
-              "* &";
+            var cmd = "sudo rm " + __dirname + "/rec/" + callToRecName(lastCalls[0], 999).slice(0, -4) + "* &";
             try {
               execSync(cmd, { stdio: "ignore" });
             } catch (error) {
@@ -1105,19 +1032,11 @@ function sendTelegramMessage(data) {
 
   try {
     telegramKeyWords = readTelegramKeyWords();
-    var chName = data
-      .slice(data.indexOf("CH") + 6, data.indexOf("CH") + 22)
-      .toString();
-    var isAlreadyOnLastCalls =
-      lastCalls.filter((call) => call.includes(chName)).length > 1;
+    var chName = data.slice(data.indexOf("CH") + 6, data.indexOf("CH") + 22).toString();
+    var isAlreadyOnLastCalls = lastCalls.filter((call) => call.includes(chName)).length > 1;
 
     /* Send telegram message only if chName contain keywords from .txt file and if that channel is new(no present on last calls) */
-    if (
-      telegramKeyWords.some((word) =>
-        data.toLowerCase().includes(word.toLowerCase())
-      ) &&
-      !isAlreadyOnLastCalls
-    ) {
+    if (telegramKeyWords.some((word) => data.toLowerCase().includes(word.toLowerCase())) && !isAlreadyOnLastCalls) {
       msg = data;
     }
     if (msg != "") {
@@ -1131,21 +1050,18 @@ function sendTelegramMessage(data) {
 
 function getCpuTemp() {
   var temp;
-  exec(
-    "cat /sys/class/thermal/thermal_zone0/temp &",
-    (error, stdout, stderr) => {
-      if (error) {
-        console.log(`CpuTemp error: ${error.message}`);
-        return;
-      }
-      if (stderr) {
-        console.log(`CpuTemp stderr: ${stderr}`);
-        return;
-      }
-      temp = parseInt(stdout / 1000);
-      cpuTemp = temp;
+  exec("cat /sys/class/thermal/thermal_zone0/temp &", (error, stdout, stderr) => {
+    if (error) {
+      console.log(`CpuTemp error: ${error.message}`);
+      return;
     }
-  );
+    if (stderr) {
+      console.log(`CpuTemp stderr: ${stderr}`);
+      return;
+    }
+    temp = parseInt(stdout / 1000);
+    cpuTemp = temp;
+  });
   //console.log(`CPU temp: ${cpuTemp}`);
 }
 
@@ -1176,8 +1092,8 @@ function getWifiStatus() {
       console.log(`getWifiStatus stderr: ${stderr}`);
       return;
     }
-    SSID = 'ok'; //stdout.split('ESSID:"')[1].split('"')[0];
-    Quality = 'ok'; //stdout.split("Link Quality=")[1].split(" ")[0];
+    SSID = "ok"; //stdout.split('ESSID:"')[1].split('"')[0];
+    Quality = "ok"; //stdout.split("Link Quality=")[1].split(" ")[0];
     wifiStatus = SSID + " | Quality: " + Quality;
   });
 }
@@ -1232,9 +1148,7 @@ parser.on("data", (data) => {
       } else {
         unidenRetryCnt++;
         if (unidenRetryCnt > unidenRetryCntMax) {
-          console.log(
-            "[ERORR] Shifting cmd: " + unidenPendingRequests[0].toString()
-          );
+          console.log("[ERORR] Shifting cmd: " + unidenPendingRequests[0].toString());
           unidenPendingRequests.shift();
           unidenRetryCnt = 0;
         }

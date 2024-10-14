@@ -11,7 +11,7 @@
         "highPassFilter": "100",
         "specChTimeout": 2000,
         "normChTimeout": 250,
-        "maxRecDuration": 0,
+        "maxRecDuration": 600000,
         "squelchOffValue": "1",
         "squelchOnValue": "2",
         "recExt": ".mp3",
