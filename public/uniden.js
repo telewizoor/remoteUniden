@@ -2,11 +2,15 @@ var curUrl = window.location.href;
 
 /* Remove port from the URL */
 if( curUrl.includes(':') ) {
-  var port = curUrl.split(':')[0];
+  var curUrl = curUrl.substr(0, curUrl.lastIndexOf(":"));
 }
 
 /* Get subpage(if used) */
 var subpage = curUrl.substring(curUrl.lastIndexOf('/') + 1);
+/* Some dirty hack to check if it is real subpage */
+if( curUrl.includes(subpage) ) {
+  subpage = '';
+}
 
 var socket = io(curUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
 

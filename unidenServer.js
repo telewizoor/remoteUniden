@@ -150,7 +150,7 @@ function getTime() {
 }
 
 /* Connect to port 80 - HTTP serer */
-console.log("listening on http port");
+console.log("listening on " + port + " port");
 http.listen(port, "0.0.0.0");
 
 /* Try to open uniden serial port TODO */
@@ -180,6 +180,7 @@ function returnHttpObject(req, res, fileName, contentType) {
 function handler(req, res) {
   //create server
   // console.log(req.url);
+  // console.log(req.url.split('?')[0].replace(subpage, ''))
   /* Ignore everything after '?' sign */
   switch (req.url.split('?')[0].replace(subpage, '')) {
     case "/style.css":
