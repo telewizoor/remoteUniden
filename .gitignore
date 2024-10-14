@@ -1,6 +1,6 @@
-rec/
-saved_rec/
-config/
+rec
+
+config
 node_modules
 token.txt
 debug.log
