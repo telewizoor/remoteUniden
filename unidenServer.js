@@ -76,9 +76,9 @@ var serialPort = new SerialPort({
 const parser = serialPort.pipe(new DelimiterParser({ delimiter: "\r" }));
 
 // Create a bot that uses 'polling' to fetch new updates
-//if(telegramBotToken != "") {
-const bot = new telegramBot(telegramBotToken, { polling: false });
-//}
+if(telegramBotToken != "") {
+  const bot = new telegramBot(telegramBotToken, { polling: false });
+}
 
 /* Uniden Buttons */
 var modelInfoCMD = Buffer.from("MDL\r");
@@ -1189,26 +1189,3 @@ parser.on("data", (data) => {
       break;
   }
 });
-
-/* DEFUALT CONFIG */
-// var maxLastCalls      = 10;
-// var unidenRefreshRate = 250;    /* ms */
-// var lowPassFilter     = '5000'; /* Hz */
-// var highPassFilter    = '100';  /* Hz */
-// var specChTimeout     = 2000;   /* ms - How long keep squelch for special channels */
-// var normChTimeout     = 250;   /* ms - How long keep squelch for special channels */
-// var squelchOffValue   = '1';
-// var squelchOnValue    = '2';
-// var recExt            = '.mp3';
-// var denoise           = false;
-// var denoiseFactor    = 0.1;
-// var recSaveDuration   = 3000; /* auto save recording longer than x seconds */
-// var specialChStart    = 150;
-// var prioChannelsCount = 5;
-// var channelsInBank    = 50;
-// var prioBanks         = [ 4, 5, 6, 7, 8, 9, 10 ];
-// var passwordHash     = 'a98c9070c527bed6f0904ff040800c1adff461a8bebb064350b1c5246847785a';
-// var telegramChannelId = '-1002159264919'
-// var telegramKeyWords  = ''; /* will be loaded from file telegramKeyWords.txt */
-// var telegramKeyWordsFileName = 'telegramKeyWords.txt'
-// const telegramBotToken = '7291353732:AAFpxBBwtmL2zEzdLp5dvo-a2dTaAVHjk90';

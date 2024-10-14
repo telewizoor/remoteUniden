@@ -1,6 +1,7 @@
 rec/
 saved_rec/
 config/
+node_modules
 token.txt
 debug.log
 package-lock.json
