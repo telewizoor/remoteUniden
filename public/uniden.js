@@ -1,5 +1,14 @@
-var curUrl = window.location.href.slice(0, -1);
-var socket = io(curUrl + ':80');
+var curUrl = window.location.href;
+
+/* Remove port from the URL */
+if( curUrl.includes(':') ) {
+  var port = curUrl.split(':')[0];
+}
+
+/* Get subpage(if used) */
+var subpage = curUrl.substring(curUrl.lastIndexOf('/') + 1);
+
+var socket = io(curUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
 
 var lastCalls;
 var lastCallsLines;
@@ -17,7 +26,12 @@ var cpuTempIndexFromEnd    =  2; //25;
 var wifiStatusIndexFromEnd =  1; //26;
 
 document.body.onload = createLastCalls();
-document.body.onload = changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
+
+/* Cut last slash */
+if(curUrl[curUrl.length - 1] == '/') {
+  curUrl = curUrl.slice(0, -1);
+}
+document.body.onload = changeAudio('liveStream', curUrl + subpage + ':8000/Stream.mp3');
 
 function readSingleFile(e) {
   var file = e.target.files[0];
@@ -80,6 +94,7 @@ function changeAudio(elName, source) {
   // Load src of the audio file
   audioElement.load();
   if(elName != 'liveStream') {
+    // TODO: 
     document.getElementById(elName + "prio1").setAttribute( "onclick", "addPrioChannel(\"" + source.split('/')[source.split('/').length-1] + "\"," + "1)" );
     document.getElementById(elName + "prio2").setAttribute( "onclick", "addPrioChannel(\"" + source.split('/')[source.split('/').length-1] + "\"," + "2)" );
     document.getElementById(elName + "prio3").setAttribute( "onclick", "addPrioChannel(\"" + source.split('/')[source.split('/').length-1] + "\"," + "3)" );

@@ -1,6 +1,6 @@
 rec/
 saved_rec/
-deye/
-public/deye/
 config/
 token.txt
+debug.log
+package-lock.json

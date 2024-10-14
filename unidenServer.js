@@ -10,8 +10,8 @@ var io = require("socket.io")(http, {
   cors: {
     origin: "*",
   },
+  path: "/uniden/",
 });
-// const deye = require("./deye/deye.js");
 const telegramBot = require("node-telegram-bot-api");
 
 /* Caught exceptions */
@@ -21,8 +21,11 @@ process.on("uncaughtException", function (err) {
 });
 
 /* get configuration */
-var deyeEnabled = 0;
+var port = config.get("uniden.port");
+var subpage = config.get("uniden.subpage");
+var archivedRecPath = config.get("uniden.archivedRecPath");
 var maxLastCalls = config.get("uniden.maxLastCalls");
+var pageRefreshRate = config.get("uniden.pageRefreshRate");
 var unidenRefreshRate = config.get("uniden.unidenRefreshRate");
 var lowPassFilter = config.get("uniden.lowPassFilter"); /* Hz */
 var highPassFilter = config.get("uniden.highPassFilter"); /* Hz */
@@ -36,7 +39,7 @@ var squelchOffValue = config.get("uniden.squelchOffValue");
 var squelchOnValue = config.get("uniden.squelchOnValue");
 var recExt = config.get("uniden.recExt");
 var denoise = config.get("uniden.denoise");
-var denoise_factor = config.get("uniden.denoise_factor");
+var denoiseFactor = config.get("uniden.denoiseFactor");
 var recSaveDuration = config.get(
   "uniden.recSaveDuration"
 ); /* auto save recording longer than x seconds */
@@ -44,7 +47,7 @@ var specialChStart = config.get("uniden.specialChStart");
 var prioChannelsCount = config.get("uniden.prioChannelsCount");
 var channelsInBank = config.get("uniden.channelsInBank");
 var prioBanks = config.get("uniden.prioBanks");
-var password_hash = config.get("uniden.password_hash");
+var passwordHash = config.get("uniden.passwordHash");
 var telegramChannelId = config.get("telegram.telegramChannelId");
 var telegramKeyWords = config.get(
   "telegram.telegramKeyWords"
@@ -52,7 +55,7 @@ var telegramKeyWords = config.get(
 var telegramKeyWordsFileName = config.get("telegram.telegramKeyWordsFileName");
 const telegramBotToken = config.get("telegram.telegramBotToken");
 
-var specChCounter = 0;
+var noSquelchCounter = 0;
 var recDuration = 0;
 var lastCalls = [];
 var recNum = 0;
@@ -66,6 +69,7 @@ var unidenRequestsNotReady = 1;
 var unidenRetryCnt = 0;
 var unidenRetryCntMax = 3;
 var unidenReceiveBuffer = "";
+var unidenSendBuffer = "";
 
 var serialPort = new SerialPort({
   path: "/dev/ttyACM0",
@@ -79,7 +83,9 @@ var serialPort = new SerialPort({
 const parser = serialPort.pipe(new DelimiterParser({ delimiter: "\r" }));
 
 // Create a bot that uses 'polling' to fetch new updates
-const bot = new telegramBot(telegramBotToken, { polling: true });
+//if(telegramBotToken != "") {
+  const bot = new telegramBot(telegramBotToken, { polling: false });
+//}
 
 /* Uniden Buttons */
 var modelInfoCMD = Buffer.from("MDL\r");
@@ -164,7 +170,7 @@ function getTime() {
 
 /* Connect to port 80 - HTTP serer */
 console.log("listening on http port");
-http.listen(80, "0.0.0.0");
+http.listen(port, "0.0.0.0");
 
 /* Try to open uniden serial port TODO */
 try {
@@ -228,17 +234,6 @@ function handler(req, res) {
         "text/javascript"
       );
       break;
-    case "/deye":
-      returnHttpObject(req, res, "/public/deye/index.html", "text/html");
-      break;
-    case "/deye/deyeClient.js":
-      returnHttpObject(
-        req,
-        res,
-        "/public/deye/deyeClient.js",
-        "text/javascript"
-      );
-      break;
     default:
       /* mostly records */
       var type = "text/html";
@@ -258,33 +253,10 @@ function handler(req, res) {
   }
 }
 
-/* handler for socket.io Deye site requests */
-function handleDeyeSocket(socket) {
-  socket.on("deyeRefresh", function (arg) {});
-
-  socket.on("deyeTest", function () {
-    try {
-      console.log("deye test function");
-      deye.test();
-    } catch {
-      console.log("deye busy");
-    }
-  });
-
-  socket.on("getChartData", function (entryName, interval) {
-    try {
-      //console.log('deye get chart data for: ' + entryName);
-      deye.getChartData(entryName, interval);
-    } catch {
-      console.log("deye busy");
-    }
-  });
-}
-
 function checkPassword(hash) {
   var ret = 0;
   // console.log('Received password hash: ' + hash);
-  if (hash != password_hash) {
+  if (hash != passwordHash) {
     console.log(getTime() + ": Wrong password!!!");
     ret = 0;
   } else {
@@ -363,10 +335,6 @@ io.sockets.on("connection", function (socket) {
       }
     }
   });
-
-  if (deyeEnabled) {
-    handleDeyeSocket(socket);
-  }
 });
 
 function execShell(cmd) {
@@ -403,9 +371,13 @@ function removeRecord(name) {
 
 function getSavedRecords(filter) {
   var recs = fs.readdirSync(__dirname + "/saved_rec/");
+  var oldRecs = fs.readdirSync(__dirname + archivedRecPath);
   if (filter != "*") {
     var dateFilter = "_" + filter.toString().replaceAll("-", "_");
     recs = recs.filter(function (s) {
+      return ~s.indexOf(dateFilter);
+    });
+    oldRecs = oldRecs.filter(function (s) {
       return ~s.indexOf(dateFilter);
     });
   }
@@ -416,7 +388,14 @@ function getSavedRecords(filter) {
     b = b.slice(37).slice(0, -4).split("_").join("");
     return a > b ? -1 : a < b ? 1 : 0;
   });
-  return recs;
+  oldRecs.sort(function (a, b) {
+    a = a.slice(37).slice(0, -4).split("_").join("");
+    b = b.slice(37).slice(0, -4).split("_").join("");
+    return a > b ? -1 : a < b ? 1 : 0;
+  });
+  // console.log(recs);
+  // console.log(oldRecs);
+  return recs.concat(oldRecs);
 }
 
 function checkIfRecordsSaved(table) {
@@ -722,7 +701,8 @@ function unidenParseCurrentStatus(data) {
 
   //console.log(unidenData)
   /* send parsed data to http */
-  io.emit("unidenText", unidenData);
+  // io.emit("unidenText", unidenData);
+  unidenSendBuffer = unidenData;
 }
 
 function unidenGetResponseHeader(data) {
@@ -835,7 +815,7 @@ function mergeRecords(name, num) {
     /* if denoising is active */
     if (denoise) {
       filterCmd +=
-        "noisered " + __dirname + "/noise.prof " + denoise_factor + " ";
+        "noisered " + __dirname + "/noise.prof " + denoiseFactor + " ";
     }
 
     var replaceCmd =
@@ -850,7 +830,7 @@ function mergeRecords(name, num) {
 
     var autoSaveCmd = "";
     // console.log(recDuration + 'ms chNum: ' + chNum);
-    if (recDuration >= recSaveDuration && isChannelSpecial(chNum)) {
+    if (recDuration >= recSaveDuration && (isChannelSpecial(chNum) || name.includes('SSTV') || name.includes('ISS'))) {
       autoSaveCmd =
         "sudo cp " +
         outName +
@@ -919,7 +899,9 @@ function mergeRecords(name, num) {
   }
 
   // Send Telegram notification
-  sendTelegramMessage(name + ": " + recDuration / 1000 + "s");
+  if(telegramBotToken != "") {
+    sendTelegramMessage(name + ": " + recDuration / 1000 + "s");
+  }
 }
 
 function handleLastCalls(receivedData) {
@@ -965,7 +947,7 @@ function handleLastCalls(receivedData) {
     /* Reset timer when signal appeared again */
     /* != 0/5 for special channels */
     if (sigPower != "0/5" && isChannelSpecial(channelNum.slice(2))) {
-      specChCounter = 0;
+      noSquelchCounter = 0;
     }
 
     /* > 1/5 for normal channels */
@@ -974,7 +956,7 @@ function handleLastCalls(receivedData) {
       sigPower != "1/5" &&
       !isChannelSpecial(channelNum.slice(2))
     ) {
-      specChCounter = 0;
+      noSquelchCounter = 0;
     }
 
     /* squelch */
@@ -993,18 +975,18 @@ function handleLastCalls(receivedData) {
 
       /* Check if channel is special and counter is below threshold */
       if (isChannelSpecial(channelNum.slice(2))) {
-        if (specChCounter < specChTimeout) {
+        if (noSquelchCounter < specChTimeout) {
           /* still recording, bump up special channel counter */
-          specChCounter += unidenRefreshRate;
+          noSquelchCounter += unidenRefreshRate;
         } else {
           //console.log('return squelch to 2');
           unidenSetSquelch(squelchOnValue);
         }
       } else {
         /* normal channel */
-        if (specChCounter < normChTimeout) {
+        if (noSquelchCounter < normChTimeout) {
           /* still recording, bump up special channel counter */
-          specChCounter += unidenRefreshRate;
+          noSquelchCounter += unidenRefreshRate;
         } else {
           //console.log('return squelch to 2');
           unidenSetSquelch(squelchOnValue);
@@ -1059,17 +1041,14 @@ function handleLastCalls(receivedData) {
 
         /* start recording */
         if (!recording) {
-          /* if special, turn off squelch for specChTimeout time */
-          //if (isChannelSpecial(channelNum.slice(2))) {
-          specChCounter = 0;
-          //console.log(channelNum.slice(2) + ' special/norm counter = 0, turn off squelch');
+          /* Turn off squelch for specChTimeout/normChTimeout time */
+          noSquelchCounter = 0;
           unidenSetSquelch(squelchOffValue);
-          //}
           recording = 1;
-          //var cmd = 'rec ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum) + ' silence -l 1 0.3 3% 1 1.0 0.5% trim 0 180 > /dev/null 2>&1 &'; // > /dev/null 2>&1 &
+          /* Send update to webpage */
+          sendUnidenSendBuffer();
 
           if (recExt == ".mp3") {
-            //var cmd = 'sudo svar ' + __dirname + '/rec/' + callToRecName(lastCalls[lastCalls.length-1], recNum, 0) + ' -l 1 -o MP3 -f 99999 &';
             var cmd =
               "sudo rec " +
               __dirname +
@@ -1197,10 +1176,14 @@ function getWifiStatus() {
       console.log(`getWifiStatus stderr: ${stderr}`);
       return;
     }
-    SSID = stdout.split('ESSID:"')[1].split('"')[0];
-    Quality = stdout.split("Link Quality=")[1].split(" ")[0];
+    SSID = 'ok'; //stdout.split('ESSID:"')[1].split('"')[0];
+    Quality = 'ok'; //stdout.split("Link Quality=")[1].split(" ")[0];
     wifiStatus = SSID + " | Quality: " + Quality;
   });
+}
+
+function sendUnidenSendBuffer() {
+  io.emit("unidenText", unidenSendBuffer);
 }
 
 var _appendBuffer = function (buffer1, buffer2) {
@@ -1226,10 +1209,10 @@ setInterval(function () {
 }, unidenRefreshRate);
 
 setInterval(function () {
-  //unidenSendPendingRequests();
-}, 25);
+  sendUnidenSendBuffer();
+}, pageRefreshRate);
 
-/* Read last line and send it to socket io */
+/* Read data from Uniden serialport */
 parser.on("data", (data) => {
   var receivedData = data;
   var responseHeader = unidenGetResponseHeader(receivedData);
@@ -1293,18 +1276,7 @@ parser.on("data", (data) => {
   }
 });
 
-if (deyeEnabled) {
-  function ioSend(data, arg) {
-    io.emit(data, arg);
-  }
-
-  exports.ioSend = ioSend;
-  exports.getTime = getTime;
-  exports.execSync = execSync;
-}
-
 /* DEFUALT CONFIG */
-// var deyeEnabled       = 1;
 // var maxLastCalls      = 10;
 // var unidenRefreshRate = 250;    /* ms */
 // var lowPassFilter     = '5000'; /* Hz */
@@ -1315,13 +1287,13 @@ if (deyeEnabled) {
 // var squelchOnValue    = '2';
 // var recExt            = '.mp3';
 // var denoise           = false;
-// var denoise_factor    = 0.1;
+// var denoiseFactor    = 0.1;
 // var recSaveDuration   = 3000; /* auto save recording longer than x seconds */
 // var specialChStart    = 150;
 // var prioChannelsCount = 5;
 // var channelsInBank    = 50;
 // var prioBanks         = [ 4, 5, 6, 7, 8, 9, 10 ];
-// var password_hash     = 'a98c9070c527bed6f0904ff040800c1adff461a8bebb064350b1c5246847785a';
+// var passwordHash     = 'a98c9070c527bed6f0904ff040800c1adff461a8bebb064350b1c5246847785a';
 // var telegramChannelId = '-1002159264919'
 // var telegramKeyWords  = ''; /* will be loaded from file telegramKeyWords.txt */
 // var telegramKeyWordsFileName = 'telegramKeyWords.txt'

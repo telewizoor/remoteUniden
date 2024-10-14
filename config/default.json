@@ -1,27 +1,33 @@
 {
     "uniden": {
+        "port": 80,
+        "_comment": "When your uniden page is eg. on yourpage.com/uniden, write '/uniden' here",
+        "subpage": "",
+        "archivedRecPath": "../archived_rec/",
         "maxLastCalls": 10,
-        "unidenRefreshRate": 250,
+        "pageRefreshRate": 500,
+        "unidenRefreshRate": 100,
         "lowPassFilter": "6000",
         "highPassFilter": "100",
         "specChTimeout": 2000,
         "normChTimeout": 250,
+        "maxRecDuration": 0,
         "squelchOffValue": "1",
         "squelchOnValue": "2",
         "recExt": ".mp3",
         "denoise": false,
-        "denoise_factor": 0.1,
+        "denoiseFactor": 0.1,
         "recSaveDuration": 3000,
         "specialChStart": 150,
         "prioChannelsCount": 5,
         "channelsInBank": 50,
         "prioBanks": [ 4, 5, 6, 7, 8, 9, 10 ],
-        "password_hash": "your_pass",
+        "passwordHash": ""
     },
     "telegram": {
-        "telegramChannelId": "your_channel_id",
+        "telegramChannelId": "",
         "telegramKeyWords": "",
         "telegramKeyWordsFileName": "telegramKeyWords.txt",
-        "telegramBotToken": "your_token"
+        "telegramBotToken": ""
     }
 }
