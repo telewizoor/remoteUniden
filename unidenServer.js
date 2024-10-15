@@ -335,15 +335,19 @@ function removeRecord(name) {
 
 function getSavedRecords(filter) {
   var recs = fs.readdirSync(__dirname + "/saved_rec/");
-  var oldRecs = fs.readdirSync(__dirname + archivedRecPath);
+  if(archivedRecPath != "") {
+    var oldRecs = fs.readdirSync(__dirname + archivedRecPath);
+  }
   if (filter != "*") {
     var dateFilter = "_" + filter.toString().replaceAll("-", "_");
     recs = recs.filter(function (s) {
       return ~s.indexOf(dateFilter);
     });
-    oldRecs = oldRecs.filter(function (s) {
-      return ~s.indexOf(dateFilter);
-    });
+    if(archivedRecPath != "") {
+      oldRecs = oldRecs.filter(function (s) {
+        return ~s.indexOf(dateFilter);
+      });
+    }
   }
   /* sort by date */
   /* CH054_ACC_Low_Z__JKR___130_8750MHz___2024_02_11_20_24_30.mp3 */
@@ -352,14 +356,20 @@ function getSavedRecords(filter) {
     b = b.slice(37).slice(0, -4).split("_").join("");
     return a > b ? -1 : a < b ? 1 : 0;
   });
-  oldRecs.sort(function (a, b) {
-    a = a.slice(37).slice(0, -4).split("_").join("");
-    b = b.slice(37).slice(0, -4).split("_").join("");
-    return a > b ? -1 : a < b ? 1 : 0;
-  });
+  if(archivedRecPath != "") {
+    oldRecs.sort(function (a, b) {
+      a = a.slice(37).slice(0, -4).split("_").join("");
+      b = b.slice(37).slice(0, -4).split("_").join("");
+      return a > b ? -1 : a < b ? 1 : 0;
+    });
+  }
   // console.log(recs);
   // console.log(oldRecs);
-  return recs.concat(oldRecs);
+  if(archivedRecPath != "") {
+    return recs.concat(oldRecs);
+  } else {
+    return recs;
+  }
 }
 
 function checkIfRecordsSaved(table) {

@@ -8,7 +8,8 @@ if( curUrl.includes(':') ) {
 /* Get subpage(if used) */
 var subpage = curUrl.substring(curUrl.lastIndexOf('/') + 1);
 
-var socket = io(curUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
+socketUrl = curUrl.replace(subpage, '').slice(0,-1);
+var socket = io(socketUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
 
 var reload       = false;
 var filterSwitch = true;
