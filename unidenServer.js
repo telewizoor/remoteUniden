@@ -13,6 +13,8 @@ var io = require("socket.io")(http, {
   path: "/uniden/",
 });
 const telegramBot = require("node-telegram-bot-api");
+var osu = require('node-os-utils');
+var cpu = osu.cpu
 
 /* Caught exceptions */
 process.on("uncaughtException", function (err) {
@@ -365,6 +367,7 @@ function getSavedRecords(filter) {
   }
   // console.log(recs);
   // console.log(oldRecs);
+  // oldRecs.replace('/saved_rec/', subpage + '/saved_rec/');
   if(archivedRecPath != "") {
     return recs.concat(oldRecs);
   } else {
@@ -1077,24 +1080,14 @@ function getCpuTemp() {
 }
 
 function getCpuLoad() {
-  var load;
-  exec('top -b -n 1 | grep "%Cpu" &', (error, stdout, stderr) => {
-    if (error) {
-      console.log(`CpuLoad error: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.log(`CpuLoad stderr: ${stderr}`);
-      return;
-    }
-    load = 100 - parseInt(stdout.split(", ")[3].split(" ")[0]);
-    cpuLoad = load;
-  });
-  //console.log(`CPU load: ${cpuLoad}`);
+  cpu.usage()
+  .then(cpuPercentage => {
+    cpuLoad = parseInt(cpuPercentage);
+  })
 }
 
 function getWifiStatus() {
-  exec("iwconfig wlan0 | grep Link &", (error, stdout, stderr) => {
+  exec("iwconfig wlan0 &", (error, stdout, stderr) => {
     if (error) {
       console.log(`getWifiStatus error: ${error.message}`);
       return;
@@ -1103,8 +1096,8 @@ function getWifiStatus() {
       console.log(`getWifiStatus stderr: ${stderr}`);
       return;
     }
-    SSID = "ok"; //stdout.split('ESSID:"')[1].split('"')[0];
-    Quality = "ok"; //stdout.split("Link Quality=")[1].split(" ")[0];
+    SSID = stdout.split('ESSID:"')[1].split('"')[0];
+    Quality = stdout.split("Link Quality=")[1].split(" ")[0];
     wifiStatus = SSID + " | Quality: " + Quality;
   });
 }
