@@ -65,6 +65,7 @@ var unidenRetryCnt = 0;
 var unidenRetryCntMax = 3;
 var unidenReceiveBuffer = "";
 var unidenSendBuffer = "";
+var disableSquelchManagingSwitch = false;
 
 var serialPort = new SerialPort({
   path: "/dev/ttyACM0",
@@ -307,6 +308,9 @@ io.sockets.on("connection", function (socket) {
         case "unidenAddChToPrio":
           unidenAddChToPrio(data1, data2);
           break;
+        case "disableSquelchManaging":
+          disableSquelchManaging(data1);
+          break;
       }
     }
   });
@@ -445,14 +449,16 @@ function callToRecName(call, num, ext = 1) {
 
 function unidenSetSquelch(val) {
   try {
-    serialPort.write("SQL," + val + "\r", function (err, results) {
-      if (err) {
-        console.log("SQL Error: " + err);
-      }
-      if (results) {
-        //console.log('SQL: ' + results);
-      }
-    });
+    if(!disableSquelchManagingSwitch) {
+      serialPort.write("SQL," + val + "\r", function (err, results) {
+        if (err) {
+          console.log("SQL Error: " + err);
+        }
+        if (results) {
+          //console.log('SQL: ' + results);
+        }
+      });
+    }
   } catch {
     console.log("serial port: ERROR");
   }
@@ -571,6 +577,10 @@ function unidenAddChToPrio(chNum, prioNum) {
   } catch (err) {
     console.log("unidenReadPrioChannels: " + err);
   }
+}
+
+function disableSquelchManaging(manSquelch) {
+  disableSquelchManagingSwitch = manSquelch;
 }
 
 function unidenSendReceiveBuffer() {

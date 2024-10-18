@@ -245,6 +245,17 @@ function delayCheckBoxPress(input) {
   }
 }
 
+function disableSquelchManaging(input) {
+  var manSquelch = false;
+  if (!input.checked) {
+    manSquelch = false;
+  } else {
+    manSquelch = true;
+  }
+
+  sendSocketData("disableSquelchManaging", manSquelch);
+}
+
 function readChannelMemButton() {
   sendSocketData("readChannelMem");
 }
