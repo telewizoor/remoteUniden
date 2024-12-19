@@ -12,7 +12,7 @@ var io = require("socket.io")(http, {
   },
   path: "/uniden/",
 });
-const telegramBot = require("node-telegram-bot-api");
+const telegramBotApi = require("node-telegram-bot-api");
 var osu = require('node-os-utils');
 var cpu = osu.cpu
 
@@ -48,6 +48,7 @@ var passwordHash = config.get("uniden.passwordHash");
 var telegramChannelId = config.get("telegram.telegramChannelId");
 var telegramKeyWords = config.get("telegram.telegramKeyWords"); /* will be loaded from file telegramKeyWords.txt */
 var telegramKeyWordsFileName = config.get("telegram.telegramKeyWordsFileName");
+var telegramBot;
 const telegramBotToken = config.get("telegram.telegramBotToken");
 
 var noSquelchCounter = 0;
@@ -80,7 +81,8 @@ const parser = serialPort.pipe(new DelimiterParser({ delimiter: "\r" }));
 
 // Create a bot that uses 'polling' to fetch new updates
 if(telegramBotToken != "") {
-  const bot = new telegramBot(telegramBotToken, { polling: false });
+  telegramBot = new telegramBotApi(telegramBotToken, { polling: false });
+  console.log("Telegram bot connected.");
 }
 
 /* Uniden Buttons */
@@ -796,7 +798,7 @@ function mergeRecords(name, num) {
 
     var autoSaveCmd = "";
     // console.log(recDuration + 'ms chNum: ' + chNum);
-    if (recDuration >= recSaveDuration && (isChannelSpecial(chNum) || name.includes("SSTV") || name.includes("ISS"))) {
+    if (recDuration >= recSaveDuration && (isChannelSpecial(chNum) || name.includes("SSTV") || name.includes("ISS") || name.includes("LPR"))) {
       autoSaveCmd = "sudo cp " + outName + recExt + " " + __dirname + "/saved_rec/" + callToRecName(name, 999);
     }
 
@@ -951,6 +953,7 @@ function handleLastCalls(receivedData) {
       /* Check if recording is not too long(eg. some random noise) */
       if (recDuration > maxRecDuration && maxRecDuration > 0) {
         /* Skip that channel */
+        console.log('Skipping channel - too long recording! ' + channelNum);
         unidenSendCmd(buttonsDict[">"]);
       }
     } else {
@@ -1064,7 +1067,7 @@ function sendTelegramMessage(data) {
       msg = data;
     }
     if (msg != "") {
-      bot.sendMessage(telegramChannelId, msg);
+      telegramBot.sendMessage(telegramChannelId, msg);
       console.log("Sending message to telegram channel:\n" + msg);
     }
   } catch (error) {
