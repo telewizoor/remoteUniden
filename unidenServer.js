@@ -10,7 +10,7 @@ var io = require("socket.io")(http, {
   cors: {
     origin: "*",
   },
-  path: "/uniden/",
+  path: "/skrzydlnaio/",
 });
 const telegramBot = require("node-telegram-bot-api");
 var osu = require('node-os-utils');
@@ -49,6 +49,14 @@ var telegramChannelId = config.get("telegram.telegramChannelId");
 var telegramKeyWords = config.get("telegram.telegramKeyWords"); /* will be loaded from file telegramKeyWords.txt */
 var telegramKeyWordsFileName = config.get("telegram.telegramKeyWordsFileName");
 const telegramBotToken = config.get("telegram.telegramBotToken");
+
+/* refresh some config TEST */
+setInterval(function () {
+  squelchOffValue = config.get("uniden.squelchOffValue");
+  squelchOnValue = config.get("uniden.squelchOnValue");
+  lowPassFilter = config.get("uniden.lowPassFilter"); /* Hz */
+  highPassFilter = config.get("uniden.highPassFilter"); /* Hz */
+}, 30000);
 
 var noSquelchCounter = 0;
 var recDuration = 0;
@@ -894,12 +902,12 @@ function handleLastCalls(receivedData) {
     }
 
     /* Reset timer when signal appeared again */
-    /* != 0/5 for special channels */
+    /* > 2/5 for special channels */
     if (sigPower != "0/5" && isChannelSpecial(channelNum.slice(2))) {
       noSquelchCounter = 0;
     }
 
-    /* > 1/5 for normal channels */
+    /* > 2/5 for normal channels */
     if (sigPower != "0/5" && sigPower != "1/5" && !isChannelSpecial(channelNum.slice(2))) {
       noSquelchCounter = 0;
     }

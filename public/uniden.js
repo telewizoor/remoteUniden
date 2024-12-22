@@ -16,7 +16,7 @@ if( subpage.includes('.') ) {
   subpage = '';
 }
 
-var socket = io(curUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
+var socket = io(curUrl.replace(subpage, ''), {path: "/skrzydlnaio/"}); // nginx reverse proxy works on 80
 
 var lastCalls;
 var lastCallsLines;

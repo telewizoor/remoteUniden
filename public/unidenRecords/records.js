@@ -9,7 +9,7 @@ if( curUrl.includes(':') ) {
 var subpage = curUrl.substring(curUrl.lastIndexOf('/') + 1);
 
 socketUrl = curUrl.replace(subpage, '').slice(0,-1);
-var socket = io(socketUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
+var socket = io("http://telewizoor-malina.duckdns.org", {path: "/skrzydlnaio/"}); // nginx reverse proxy works on 80
 
 var reload       = false;
 var filterSwitch = true;
@@ -215,12 +215,12 @@ socket.on('savedRecords', function(data) {
                 showPlayer = false;
             } else {
                 if(getStatsSw) {
-                    audioUrl = window.location.href.slice(0, -14) + "/saved_rec/" + data[i];
+                    audioUrl = window.location.href.slice(0, -14) + "/skrzydlna/saved_rec/" + data[i];
                     getAudioDuration(audioUrl, i==maxRecords);
                 }
             }
 
-            addPlayer(data[i], "/saved_rec/" + data[i], showPlayer);
+            addPlayer(data[i], "/skrzydlna/saved_rec/" + data[i], showPlayer);
             document.getElementById("delete" + data[i]).setAttribute("onclick", "removeRecord(\"" + data[i] + "\")");
         }
         getStatsSw = false;
