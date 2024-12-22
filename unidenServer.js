@@ -14,13 +14,17 @@ var io = require("socket.io")(http, {
 });
 const telegramBotApi = require("node-telegram-bot-api");
 var osu = require('node-os-utils');
-var cpu = osu.cpu
+var cpu = osu.cpu;
+/* private libs */
+const canBus = require("./lib/can_mcp2515.js");
 
 /* Caught exceptions */
 process.on("uncaughtException", function (err) {
   console.log(getTime());
   console.log("ERROR:", err);
 });
+
+initMcp2515();
 
 /* get configuration */
 var port = config.get("uniden.port");
@@ -1206,3 +1210,5 @@ parser.on("data", (data) => {
       break;
   }
 });
+
+
