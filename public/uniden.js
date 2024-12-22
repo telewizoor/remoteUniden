@@ -312,6 +312,20 @@ function addPrioChannel( channelInfo, prioChNum ) {
   }
 }
 
+// obrotnica
+offset = 0;
+step = 1;
+angle = offset;
+
+setInterval(function () {
+  angle += step;
+  if(angle > 360) {
+    angle = angle % 360;
+  }
+  document.getElementById("antennaAngle").innerHTML = angle + '\u00B0C';
+  document.getElementById("needle").style.transform = "rotate(" + angle + "deg)";
+}, 10);
+
 socket.on('receiveBuffer', function(data) {
   $('#debugTxt').text("");
   $('#debugTxt').text(data);
