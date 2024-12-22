@@ -15,16 +15,12 @@ var io = require("socket.io")(http, {
 const telegramBotApi = require("node-telegram-bot-api");
 var osu = require('node-os-utils');
 var cpu = osu.cpu;
-/* private libs */
-const canBus = require("./lib/can_mcp2515.js");
 
 /* Caught exceptions */
 process.on("uncaughtException", function (err) {
   console.log(getTime());
   console.log("ERROR:", err);
 });
-
-initMcp2515();
 
 /* get configuration */
 var port = config.get("uniden.port");
@@ -1211,4 +1207,20 @@ parser.on("data", (data) => {
   }
 });
 
+/* private libs */
+if(config.get("uniden.antennaRotor")) {
+  const canBus = require("./lib/can_mcp2515.js");
+
+  console.log(canBus.init());
+  setInterval(function () {
+    // canBus.receive();
+    // canBus.send()
+  }, 1000);
+
+  function canReceiveCallback(id = 0, dlc = 0, data = []) {
+    console.log("Can receive callback");
+  }
+
+  exports.receiveCb = canReceiveCallback;
+}
 
