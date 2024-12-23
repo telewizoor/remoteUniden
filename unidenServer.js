@@ -1210,16 +1210,39 @@ parser.on("data", (data) => {
 /* private libs */
 if(config.get("uniden.antennaRotor")) {
   const canBus = require("./lib/can_mcp2515.js");
+  const ROTOR_TASK_PERIOD = 20;
+  const CAN_SEND_PERIOD   = 100;
 
-  console.log(canBus.init());
-  setInterval(function () {
-    // canBus.receive();
-    // canBus.send()
-  }, 1000);
+  const CAN_ROTOR_INFO_ID     = 0x100;
+  const CAN_ROTOR_CONTROL_ID  = 0x101;
+  const CAN_ROTOR_CONTROL_DLC = 8;
+  const CAN_ROTOR_DIR_LEFT    = 0x55;
+  const CAN_ROTOR_DIR_RIGHT   = 0xAA;
+
+  /*                       DIR   PWM   */
+  var rotorControlData = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  var antennaHeading = 0xFFFF; /* no data */
+
+  /* init CAN */
+  canBus.init();
 
   function canReceiveCallback(id = 0, dlc = 0, data = []) {
-    console.log("Can receive callback");
+    // console.log("Can receive callback");
+    if(CAN_ROTOR_INFO_ID == id) {
+      /* Get heading from CAN */
+      antennaHeading = data[0] * 256 + data[1];
+      /* Send to http? */
+      io.emit("rotorData", antennaHeading);
+    }
   }
+
+  setInterval(function () {
+    
+  }, ROTOR_TASK_PERIOD);
+
+  setInterval(function () {
+    canBus.send(CAN_ROTOR_CONTROL_ID, CAN_ROTOR_CONTROL_DLC, rotorControlData);
+  }, CAN_SEND_PERIOD);
 
   exports.receiveCb = canReceiveCallback;
 }

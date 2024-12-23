@@ -16,7 +16,7 @@ if( subpage.includes('.') ) {
   subpage = '';
 }
 
-var socket = io(curUrl, {path: "/uniden/"}); // nginx reverse proxy works on 80
+var socket = io(curUrl.replace(subpage, ''), {path: "/uniden/"}); // nginx reverse proxy works on 80
 
 var lastCalls;
 var lastCallsLines;
@@ -313,18 +313,14 @@ function addPrioChannel( channelInfo, prioChNum ) {
 }
 
 // obrotnica
-offset = 0;
-step = 1;
-angle = offset;
+headingOffset = 0;
+antennaHeading = 0xFFFF;
 
-setInterval(function () {
-  angle += step;
-  if(angle > 360) {
-    angle = angle % 360;
-  }
-  document.getElementById("antennaAngle").innerHTML = angle + '\u00B0C';
-  document.getElementById("needle").style.transform = "rotate(" + angle + "deg)";
-}, 10);
+socket.on('rotorData', function(data) {
+  antennaHeading = data;
+  document.getElementById("antennaAngle").innerHTML = antennaHeading + '\u00B0C';
+  document.getElementById("needle").style.transform = "rotate(" + antennaHeading + "deg)";
+});
 
 socket.on('receiveBuffer', function(data) {
   $('#debugTxt').text("");
