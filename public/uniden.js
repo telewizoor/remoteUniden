@@ -16,7 +16,7 @@ if( subpage.includes('.') ) {
   subpage = '';
 }
 
-var socket = io(curUrl.replace(subpage, ''), {path: "/uniden/"}); // nginx reverse proxy works on 80
+var socket = io(curUrl.replace(subpage, ''), {path: "/skrzydlnaio/"}); // nginx reverse proxy works on 80
 
 var lastCalls;
 var lastCallsLines;
@@ -27,6 +27,10 @@ var delayMs      = 1; /* delay for showing data */
 var delayEnabled = 0;
 var channelsToWrite = '';
 
+// obrotnica
+headingOffset = 0;
+antennaHeading = 0xFFFF;
+
 var squelchIndex           = 14;
 var lastCallsIndexFromEnd  =  4; //23; // -3
 var cpuLoadIndexFromEnd    =  3; //24;
@@ -34,6 +38,7 @@ var cpuTempIndexFromEnd    =  2; //25;
 var wifiStatusIndexFromEnd =  1; //26;
 
 document.body.onload = createLastCalls();
+document.body.onload = updateRotorGfx();
 
 if( subpage == "" ) {
   document.body.onload = changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
@@ -312,14 +317,19 @@ function addPrioChannel( channelInfo, prioChNum ) {
   }
 }
 
-// obrotnica
-headingOffset = 0;
-antennaHeading = 0xFFFF;
+function updateRotorGfx() {
+  if(antennaHeading < 0 || antennaHeading > 360) {
+    document.getElementById("antennaAngle").innerHTML = 'ERROR';
+    document.getElementById("needle").style.display = 'none';
+  } else {
+    document.getElementById("antennaAngle").innerHTML = antennaHeading + '\u00B0C';
+    document.getElementById("needle").style.transform = "rotate(" + antennaHeading + "deg)";
+  }
+}
 
 socket.on('rotorData', function(data) {
   antennaHeading = data;
-  document.getElementById("antennaAngle").innerHTML = antennaHeading + '\u00B0C';
-  document.getElementById("needle").style.transform = "rotate(" + antennaHeading + "deg)";
+  updateRotorGfx();
 });
 
 socket.on('receiveBuffer', function(data) {

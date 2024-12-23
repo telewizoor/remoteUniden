@@ -11,14 +11,14 @@
 }
 .compass > :first-child ~ * {
   position: absolute;
-  top: 20px;
+  top:40px;
   right: 0;
   bottom: 0;
-  left: 60px;
+  left: 40px;
 
 
   transform: rotate(60deg);
-  transform-origin: 50% 100%;
+  transform-origin: 50% 50%;
 }
 
 .upperText { grid-area: header; white-space: pre-wrap; }
