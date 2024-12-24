@@ -313,6 +313,12 @@ io.sockets.on("connection", function (socket) {
         case "disableSquelchManaging":
           disableSquelchManaging(data1);
           break;
+        case "unidenRotorMove":
+          var dir = data1;
+          if(config.get("uniden.antennaRotor")) {
+            rotorMove(dir);
+          }
+        break;
       }
     }
   });
@@ -1212,6 +1218,7 @@ if(config.get("uniden.antennaRotor")) {
   const canBus = require("./lib/can_mcp2515.js");
   const ROTOR_TASK_PERIOD = 20;
   const CAN_SEND_PERIOD   = 100;
+  const ROTOR_CLIENT_TIMEOUT = 300;
 
   const CAN_ROTOR_INFO_ID     = 0x100;
   const CAN_ROTOR_CONTROL_ID  = 0x101;
@@ -1220,11 +1227,21 @@ if(config.get("uniden.antennaRotor")) {
   const CAN_ROTOR_DIR_RIGHT   = 0xAA;
 
   /*                       DIR   PWM   */
-  var rotorControlData = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  var rotorControlData = [0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
   var antennaHeading = 0xFFFF; /* no data */
+  var clientDataTimeoutCnt = 0;
 
   /* init CAN */
   canBus.init();
+
+  function rotorMove(dir) {
+    if(0 == dir) {
+      rotorControlData[0] = CAN_ROTOR_DIR_LEFT;
+    } else if(1 == dir) {
+      rotorControlData[0] = CAN_ROTOR_DIR_RIGHT;
+    }
+    clientDataTimeoutCnt = 0;
+  }
 
   function canReceiveCallback(id = 0, dlc = 0, data = []) {
     // console.log("Can receive callback");
@@ -1237,7 +1254,11 @@ if(config.get("uniden.antennaRotor")) {
   }
 
   setInterval(function () {
-    
+    if(clientDataTimeoutCnt > ROTOR_CLIENT_TIMEOUT) {
+      rotorControlData[0] = 0;
+    } else {
+      clientDataTimeoutCnt += ROTOR_TASK_PERIOD;
+    }
   }, ROTOR_TASK_PERIOD);
 
   setInterval(function () {
