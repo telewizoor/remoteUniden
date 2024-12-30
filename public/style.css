@@ -5,6 +5,10 @@
   font-family:'Lucida Console', monospace; 
 }
 
+input:not(:checked)+#rotorContainer {
+  display: none;
+}
+
 .compass {
   display: inline-block;
   position: relative;

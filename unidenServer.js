@@ -1218,7 +1218,7 @@ if(config.get("uniden.antennaRotor")) {
   const canBus = require("./lib/can_mcp2515.js");
   const ROTOR_TASK_PERIOD = 20;
   const CAN_SEND_PERIOD   = 100;
-  const ROTOR_CLIENT_TIMEOUT = 300;
+  const ROTOR_CLIENT_TIMEOUT = 80;
 
   const CAN_ROTOR_INFO_ID     = 0x100;
   const CAN_ROTOR_CONTROL_ID  = 0x101;
@@ -1227,7 +1227,7 @@ if(config.get("uniden.antennaRotor")) {
   const CAN_ROTOR_DIR_RIGHT   = 0xAA;
 
   /*                       DIR   PWM   */
-  var rotorControlData = [0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  var rotorControlData = [0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
   var antennaHeading = 0xFFFF; /* no data */
   var clientDataTimeoutCnt = 0;
 
@@ -1235,10 +1235,17 @@ if(config.get("uniden.antennaRotor")) {
   canBus.init();
 
   function rotorMove(dir) {
-    if(0 == dir) {
-      rotorControlData[0] = CAN_ROTOR_DIR_LEFT;
-    } else if(1 == dir) {
-      rotorControlData[0] = CAN_ROTOR_DIR_RIGHT;
+    const limitLeft = config.get("uniden.rotorLimitLeft");
+    const limitRight = config.get("uniden.rotorLimitRight");
+    
+    if(antennaHeading > limitLeft || antennaHeading < limitRight) {
+      if(0 == dir) {
+        rotorControlData[0] = CAN_ROTOR_DIR_LEFT;
+      } else if(1 == dir) {
+        rotorControlData[0] = CAN_ROTOR_DIR_RIGHT;
+      }
+    } else {
+      rotorControlData[0] = 0;
     }
     clientDataTimeoutCnt = 0;
   }
@@ -1248,8 +1255,14 @@ if(config.get("uniden.antennaRotor")) {
     if(CAN_ROTOR_INFO_ID == id) {
       /* Get heading from CAN */
       antennaHeading = data[0] * 256 + data[1];
+
+      if(antennaHeading != 0xffff) {
+        antennaHeading += 270;
+        antennaHeading = antennaHeading % 360;
+      }
+      // console.log(data);
       /* Send to http? */
-      io.emit("rotorData", antennaHeading);
+      io.emit("rotorData", antennaHeading, rotorControlData[0]);
     }
   }
 

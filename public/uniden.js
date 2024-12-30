@@ -16,7 +16,7 @@ if( subpage.includes('.') ) {
   subpage = '';
 }
 
-var socket = io(curUrl.replace(subpage, ''), {path: "/skrzydlnaio/"}); // nginx reverse proxy works on 80
+var socket = io(curUrl.replace(subpage, ''), {path: "/uniden/"}); // nginx reverse proxy works on 80
 
 var lastCalls;
 var lastCallsLines;
@@ -30,7 +30,7 @@ var channelsToWrite = '';
 // obrotnica
 var headingOffset = 0;
 var antennaHeading = 0xFFFF;
-const rotorPeriod = 100;
+const rotorPeriod = 50;
 
 var squelchIndex           = 14;
 var lastCallsIndexFromEnd  =  4; //23; // -3
@@ -345,11 +345,21 @@ function rotorMove(dir) {
 }
 
 function rotorStop() {
-  clearInterval(rotorTask)
+  clearInterval(rotorTask);
 }
 
-socket.on('rotorData', function(data) {
+socket.on('rotorData', function(data, data2) {
   antennaHeading = data;
+  if(antennaHeading != 0xffff) {
+    antennaHeading += headingOffset;
+    antennaHeading = antennaHeading % 360;
+  }
+
+  if(data2 == 0xaa || data2 == 0x55) {
+    document.getElementById("rotorMovingIndicator").innerHTML = 'MOVING';
+  } else {
+    document.getElementById("rotorMovingIndicator").innerHTML = 'STOPPED';
+  }
   rotorUpdateGfx();
 });
 
