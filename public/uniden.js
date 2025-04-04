@@ -325,6 +325,14 @@ function rotorInit() {
   // document.getElementById('rotorRight').addEventListener('pointerup', rotorMove(1), false);
 }
 
+function rotorShow(input) {
+  if (!input.checked) {
+    sendSocketData( "unidenRotorShow", 0 );
+  } else {
+    sendSocketData( "unidenRotorShow", 1 );
+  }
+}
+
 function rotorUpdateGfx() {
   if(antennaHeading < 0 || antennaHeading > 360) {
     document.getElementById("antennaAngle").innerHTML = 'ERROR';

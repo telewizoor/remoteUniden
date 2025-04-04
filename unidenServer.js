@@ -319,6 +319,12 @@ io.sockets.on("connection", function (socket) {
             rotorMove(dir);
           }
         break;
+        case "unidenRotorShow":
+          var state = data1;
+          if(config.get("uniden.antennaRotor")) {
+            rotorShow(state);
+          }
+        break;
       }
     }
   });
@@ -1216,9 +1222,12 @@ parser.on("data", (data) => {
 /* private libs */
 if(config.get("uniden.antennaRotor")) {
   const canBus = require("./lib/can_mcp2515.js");
+  var gpiop = require('rpi-gpio').promise;
+  const rotorPowerPin = 18; // GPIO24
   const ROTOR_TASK_PERIOD = 20;
   const CAN_SEND_PERIOD   = 100;
   const ROTOR_CLIENT_TIMEOUT = 80;
+  const ROTOR_DRIVER_TIMEOUT = 200;
 
   const CAN_ROTOR_INFO_ID     = 0x100;
   const CAN_ROTOR_CONTROL_ID  = 0x101;
@@ -1227,12 +1236,33 @@ if(config.get("uniden.antennaRotor")) {
   const CAN_ROTOR_DIR_RIGHT   = 0xAA;
 
   /*                       DIR   PWM   */
-  var rotorControlData = [0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  var rotorControlData = [0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
   var antennaHeading = 0xFFFF; /* no data */
   var clientDataTimeoutCnt = 0;
+  var driverDataTimeoutCnt = 0;
 
   /* init CAN */
   canBus.init();
+
+  function rotorShow(state) {
+    if(!state) {
+      gpiop.setup(rotorPowerPin, gpiop.DIR_OUT)
+      .then(() => {
+          return gpiop.write(rotorPowerPin, false);
+      })
+      .catch((err) => {
+          console.log('Error: ', err.toString())
+      })
+    } else {
+      gpiop.setup(rotorPowerPin, gpiop.DIR_OUT)
+      .then(() => {
+          return gpiop.write(rotorPowerPin, true);
+      })
+      .catch((err) => {
+          console.log('Error: ', err.toString())
+      })
+    }
+  }
 
   function rotorMove(dir) {
     const limitLeft = config.get("uniden.rotorLimitLeft");
@@ -1253,13 +1283,18 @@ if(config.get("uniden.antennaRotor")) {
   function canReceiveCallback(id = 0, dlc = 0, data = []) {
     // console.log("Can receive callback");
     if(CAN_ROTOR_INFO_ID == id) {
-      /* Get heading from CAN */
-      antennaHeading = data[0] * 256 + data[1];
+      if(data[3] != 0 || data[5] != 0) {
+        driverDataTimeoutCnt = 0;
 
-      if(antennaHeading != 0xffff) {
-        antennaHeading += 270;
-        antennaHeading = antennaHeading % 360;
+        /* Get heading from CAN */
+        antennaHeading = data[0] * 256 + data[1];
+
+        if(antennaHeading != 0xffff) {
+          antennaHeading += 110;
+          antennaHeading = antennaHeading % 360;
+        }
       }
+
       // console.log(data);
       /* Send to http? */
       io.emit("rotorData", antennaHeading, rotorControlData[0]);
@@ -1271,6 +1306,12 @@ if(config.get("uniden.antennaRotor")) {
       rotorControlData[0] = 0;
     } else {
       clientDataTimeoutCnt += ROTOR_TASK_PERIOD;
+    }
+
+    if(driverDataTimeoutCnt > ROTOR_DRIVER_TIMEOUT) {
+      antennaHeading = 0xFFFF;
+    } else {
+      driverDataTimeoutCnt += ROTOR_TASK_PERIOD;
     }
   }, ROTOR_TASK_PERIOD);
 

@@ -1,6 +1,6 @@
 {
     "uniden": {
-        "port": 80,
+        "port": 8010,
         "_comment": "When your uniden page is eg. on yourpage.com/uniden, write '/uniden' here",
         "subpage": "",
         "archivedRecPath": "/../archived_rec/",
@@ -22,15 +22,15 @@
         "prioChannelsCount": 5,
         "channelsInBank": 50,
         "antennaRotor": 1,
-        "rotorLimit1": 270,
-        "rotorLimit2": 90,
+        "rotorLimitLeft": 270,
+        "rotorLimitRight": 90,
         "prioBanks": [ 4, 5, 6, 7, 8, 9, 10 ],
-        "passwordHash": ""
+        "passwordHash": "a98c9070c527bed6f0904ff040800c1adff461a8bebb064350b1c5246847785a"
     },
     "telegram": {
-        "telegramChannelId": "",
+        "telegramChannelId": "-1002159264919",
         "telegramKeyWords": "",
         "telegramKeyWordsFileName": "telegramKeyWords.txt",
-        "telegramBotToken": ""
+        "telegramBotToken": "7291353732:AAFpxBBwtmL2zEzdLp5dvo-a2dTaAVHjk90"
     }
 }
