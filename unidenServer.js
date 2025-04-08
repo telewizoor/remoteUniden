@@ -56,6 +56,7 @@ var recDuration = 0;
 var lastCalls = [];
 var recNum = 0;
 var recording = 0;
+var recStarted = 0;
 var cpuTemp = 0;
 var cpuLoad = 0;
 var wifiStatus = "";
@@ -974,10 +975,13 @@ function handleLastCalls(receivedData) {
       //var cmd = "sudo pkill svar";
       var cmd = "sudo pkill rec";
       //console.count("Killing recorder!");
-      try {
-        execSync(cmd, { stdio: "ignore" });
-      } catch (error) {
-        //console.log(error.message);
+      if( recStarted ) {
+        try {
+          execSync(cmd, { stdio: "ignore" });
+          recStarted = 0;
+        } catch (error) {
+          //console.log(error.message);
+        }
       }
     }
 
@@ -1036,6 +1040,7 @@ function handleLastCalls(receivedData) {
           //console.log(cmd);
           try {
             execSync(cmd, { stdio: "ignore" });
+            recStarted = 1;
           } catch (error) {
             console.log(error.message);
           }
