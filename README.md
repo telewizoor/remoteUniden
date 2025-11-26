@@ -94,7 +94,7 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
 
 Edit darkice.sh(sudo nano darkice/darkice.sh):
 
-    sudo /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
+    /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
 
 Configure audio input:
 
@@ -104,25 +104,79 @@ Configure audio input:
 
 Clone this repo:
 
+    cd ~/Project/
     git clone https://github.com/telewizoor/remoteUniden.git
+    cd remoteUniden
+    mkdir rec
+    mkdir saved_rec
 
 Install nodejs packages:
 
     npm install package.json
+    
+Configure remoteUniden, place SHA256 of your password:
+
+    sudo nano config/default.json
 
 And configure system to run darkice and remoteUniden server:
 
     crontab -e
     @reboot sleep 12 && sudo /home/${USER}/Project/darkice/darkice.sh
     @reboot sleep 15 && sudo /home/${USER}/Project/remoteUniden/start.sh
+    
+sudo nano /etc/systemd/system/remote-uniden.service 
+
+    [Unit]
+    Description=Remote Uniden Service
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=user
+    WorkingDirectory=/home/user/Project/remoteUniden
+    ExecStart=sudo /bin/bash /home/user/Project/remoteUniden/start.sh
+    Restart=always
+    RestartSec=5
+
+    [Install]
+    WantedBy=multi-user.target
+
+
+sudo nano /etc/systemd/system/darkice-start.service 
+
+    [Unit]
+    Description=Darkice Service
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=user
+    WorkingDirectory=/home/user/Project/darkice
+    ExecStart=/bin/bash /home/user/Project/darkice/darkice.sh
+    Restart=always
+    RestartSec=30
+
+    [Install]
+    WantedBy=multi-user.target
+
+
+sudo setcap 'cap_net_bind_service=+ep' $(which node)
+
+
+dtparam=audio=off
+dtoverlay=vc4-kms-v3d,nohdmi
+sudo nano /boot/firmware/config.txt
+sudo reboot
+
+
 
 For test run without reboot. Run darkice:
 
-    sudo /usr/bin/darkice -c darkice/darkice.cfg &
+    /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg &
 
 CTRL+C, and run unidenServer:
 
-    sudo node remoteUnidenServer.js
+    sudo node unidenServer.js
 
 I'm using duckdns.org to create free subdomain and use Uniden everywhere on the same address.
 
