@@ -107,7 +107,7 @@ sudo nano darkice.sh
 
 and paste:
 ```
-/usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
+sudo /usr/bin/darkice -c /home/pi/Project/darkice/darkice.cfg
 ```
 
 Configure audio input:
@@ -214,16 +214,6 @@ Reboot raspberry:
 ```
 sudo reboot
 ```
-
-
-
-For test run without reboot. Run darkice:
-
-    /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg &
-
-CTRL+C, and run unidenServer:
-
-    sudo node unidenServer.js
 
 
 ```
