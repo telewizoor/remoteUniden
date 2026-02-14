@@ -151,20 +151,20 @@ sudo nano /etc/systemd/system/remote-uniden.service
 ```
 and paste:
 ```
-    [Unit]
-    Description=Remote Uniden Service
-    After=network.target
+[Unit]
+Description=Remote Uniden Service
+After=network.target
 
-    [Service]
-    Type=simple
-    User=user
-    WorkingDirectory=/home/pi/Project/remoteUniden
-    ExecStart=sudo /bin/bash /home/pi/Project/remoteUniden/start.sh
-    Restart=always
-    RestartSec=5
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Project/remoteUniden
+ExecStart=sudo /bin/bash /home/pi/Project/remoteUniden/start.sh
+Restart=always
+RestartSec=5
 
-    [Install]
-    WantedBy=multi-user.target
+[Install]
+WantedBy=multi-user.target
 ```
 
 Create system service for darkice(audio server):
@@ -174,20 +174,20 @@ sudo nano /etc/systemd/system/darkice-start.service
 ```
 and paste:
 ```
-    [Unit]
-    Description=Darkice Service
-    After=network.target
+[Unit]
+Description=Darkice Service
+After=network.target
 
-    [Service]
-    Type=simple
-    User=user
-    WorkingDirectory=/home/pi/Project/darkice
-    ExecStart=/bin/bash /home/pi/Project/darkice/darkice.sh
-    Restart=always
-    RestartSec=30
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Project/darkice
+ExecStart=/bin/bash /home/pi/Project/darkice/darkice.sh
+Restart=always
+RestartSec=30
 
-    [Install]
-    WantedBy=multi-user.target
+[Install]
+WantedBy=multi-user.target
 ```
 
 Reload and run new services:
