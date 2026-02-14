@@ -204,7 +204,7 @@ Change raspberry config:
 ```
 sudo nano /boot/firmware/config.txt
 ```
-and add at the end:
+and add to proper lines:
 ```
 dtparam=audio=off
 dtoverlay=vc4-kms-v3d,nohdmi
