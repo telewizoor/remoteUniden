@@ -29,42 +29,43 @@ Linux raspberrypi 6.6.31+rpt-rpi-v7 #1 SMP Raspbian 1:6.6.31-1+rpt1 (2024-05-29)
 **HW:**
 raspberry pi zero 2 w
 
-**Static IP:**
-
-    sudo nmtui
-
-And then configure to get static IP address.
+**Set static IP for raspberry in your router.**
 
 Installing required packages:
-
-    sudo apt-get install git
-    sudo apt-get install nodejs
-    sudo apt-get install npm
-    sudo apt-get install sox
-    sudo apt-get install libsox-fmt-mp3
-    sudo apt-get install icecast2
+```
+sudo apt-get install git
+sudo apt-get install nodejs
+sudo apt-get install npm
+sudo apt-get install sox
+sudo apt-get install libsox-fmt-mp3
+sudo apt-get install icecast2
+```
 
 Configure icecast2 - **remember choosen password!**:
-
-    hostname: remoteUniden
-    password: password
+```
+hostname: remoteUniden
+password: password
+```
 
 Create some folder for everything:
-    
-    mkdir Project
-    cd Project
+```
+mkdir Project
+cd Project
+```
 
 Install darkice for audio stream:
-
-    sudo apt-get install darkice
-    mkdir darkice
-    cd darkice
-    touch darkice.cfg
-    touch darkice.sh
-    chmod +x darkice.sh
+```
+sudo apt-get install darkice
+mkdir darkice
+cd darkice
+touch darkice.cfg
+touch darkice.sh
+chmod +x darkice.sh
+```
 
 Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
 
+```
     # this section describes general aspects of the live streaming session
     [general]
     duration     = 0     # duration of encoding, in seconds. 0 means forever
@@ -91,10 +92,18 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
     lowpass         = 6000
     highpass        = 100
     #public          = yes       advertise this stream?
+```
 
 Edit darkice.sh(sudo nano darkice/darkice.sh):
 
-    /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
+```
+sudo nano darkice/darkice.sh
+```
+
+and paste:
+```
+/usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
+```
 
 Configure audio input:
 
@@ -103,29 +112,33 @@ Configure audio input:
 **F4** -> disable auto gain control with '**.**' key
 
 Clone this repo:
-
-    cd ~/Project/
-    git clone https://github.com/telewizoor/remoteUniden.git
-    cd remoteUniden
-    mkdir rec
-    mkdir saved_rec
+```
+cd ~/Project/
+git clone https://github.com/telewizoor/remoteUniden.git
+cd remoteUniden
+mkdir rec
+mkdir saved_rec
+```
 
 Install nodejs packages:
 
-    npm install package.json
+```
+npm install package.json
+```
     
 Configure remoteUniden, place SHA256 of your password:
 
-    sudo nano config/default.json
+```
+sudo nano config/default.json
+```
 
-And configure system to run darkice and remoteUniden server:
+Create system service for nodejs server:
 
-    crontab -e
-    @reboot sleep 12 && sudo /home/${USER}/Project/darkice/darkice.sh
-    @reboot sleep 15 && sudo /home/${USER}/Project/remoteUniden/start.sh
-    
-sudo nano /etc/systemd/system/remote-uniden.service 
-
+```
+sudo nano /etc/systemd/system/remote-uniden.service
+```
+and paste:
+```
     [Unit]
     Description=Remote Uniden Service
     After=network.target
@@ -133,17 +146,22 @@ sudo nano /etc/systemd/system/remote-uniden.service
     [Service]
     Type=simple
     User=user
-    WorkingDirectory=/home/user/Project/remoteUniden
-    ExecStart=sudo /bin/bash /home/user/Project/remoteUniden/start.sh
+    WorkingDirectory=/home/pi/Project/remoteUniden
+    ExecStart=sudo /bin/bash /home/pi/Project/remoteUniden/start.sh
     Restart=always
     RestartSec=5
 
     [Install]
     WantedBy=multi-user.target
+```
 
+Create system service for darkice(audio server):
 
-sudo nano /etc/systemd/system/darkice-start.service 
-
+```
+sudo nano /etc/systemd/system/darkice-start.service
+```
+and paste:
+```
     [Unit]
     Description=Darkice Service
     After=network.target
@@ -151,22 +169,45 @@ sudo nano /etc/systemd/system/darkice-start.service
     [Service]
     Type=simple
     User=user
-    WorkingDirectory=/home/user/Project/darkice
-    ExecStart=/bin/bash /home/user/Project/darkice/darkice.sh
+    WorkingDirectory=/home/pi/Project/darkice
+    ExecStart=/bin/bash /home/pi/Project/darkice/darkice.sh
     Restart=always
     RestartSec=30
 
     [Install]
     WantedBy=multi-user.target
+```
 
+Reload and run new services:
+```
+sudo systemctl daemon-reload
+sudo systemctl enable darkice-start
+sudo systemctl start darkice-start
+sudo systemctl enable remote-uniden
+sudo systemctl start remote-uniden
+```
 
+Run:
+
+```
 sudo setcap 'cap_net_bind_service=+ep' $(which node)
+```
 
+Change raspberry config:
 
+```
+sudo nano /boot/firmware/config.txt
+```
+and add at the end:
+```
 dtparam=audio=off
 dtoverlay=vc4-kms-v3d,nohdmi
-sudo nano /boot/firmware/config.txt
+```
+
+Reboot raspberry:
+```
 sudo reboot
+```
 
 
 
