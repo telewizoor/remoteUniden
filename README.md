@@ -63,7 +63,12 @@ touch darkice.sh
 chmod +x darkice.sh
 ```
 
-Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
+Edit darkice.cfg(sudo nano darkice.cfg) - **change password!**:
+```
+sudo nano darkice.cfg
+```
+
+and paste(modify password!):
 
 ```
     # this section describes general aspects of the live streaming session
@@ -94,10 +99,10 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
     #public          = yes       advertise this stream?
 ```
 
-Edit darkice.sh(sudo nano darkice/darkice.sh):
+Edit darkice.sh(sudo nano darkice.sh):
 
 ```
-sudo nano darkice/darkice.sh
+sudo nano darkice.sh
 ```
 
 and paste:
@@ -106,8 +111,9 @@ and paste:
 ```
 
 Configure audio input:
-
-    sudo alsamixer
+```
+sudo alsamixer
+```
 
 **F4** -> disable auto gain control with '**.**' key
 
@@ -130,6 +136,12 @@ Configure remoteUniden, place SHA256 of your password:
 
 ```
 sudo nano config/default.json
+```
+
+Run:
+
+```
+sudo setcap 'cap_net_bind_service=+ep' $(which node)
 ```
 
 Create system service for nodejs server:
@@ -187,12 +199,6 @@ sudo systemctl enable remote-uniden
 sudo systemctl start remote-uniden
 ```
 
-Run:
-
-```
-sudo setcap 'cap_net_bind_service=+ep' $(which node)
-```
-
 Change raspberry config:
 
 ```
@@ -219,7 +225,45 @@ CTRL+C, and run unidenServer:
 
     sudo node unidenServer.js
 
-I'm using duckdns.org to create free subdomain and use Uniden everywhere on the same address.
+
+```
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 80
+sudo ufw allow 8000
+sudo ufw allow from 192.168.0.0/16 to any port 22
+sudo ufw enable
+```
+
+```
+sudo nano /usr/local/sbin/dyndns.sh
+```
+
+```
+crontab -e:
+```
+paste:
+```
+*/5 * * * * sudo /usr/local/sbin/dyndns.sh 2>&1 | logger -t dyndns
+```
+
+
+```
+#!/bin/sh
+
+#Define your OVH DynHost ID & password and the domain name for which you wish to update DynHost
+DYNHOST_ID='radiomalina.pl-xxx'
+DYNHOST_PASSWORD='xxx'
+DOMAIN_NAME='xxx.radiomalina.pl'
 
 
 
+#####################
+####DO NOT TOUCH#####
+#####################
+
+PUBLIC_IP=$(host -4 myip.opendns.com resolver1.opendns.com | grep "myip.opendns.com has" | awk '{print $4}')
+
+#Call OVH for update
+curl --silent --user "$DYNHOST_ID:$DYNHOST_PASSWORD" "https://www.ovh.com/nic/update?system=dyndns&hostname=$DOMAIN_NAME&myip=$PUBLIC_IP"
+```
