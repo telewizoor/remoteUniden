@@ -232,6 +232,7 @@ sudo nano /usr/local/sbin/dyndns.sh
 ```
 crontab -e:
 ```
+
 paste:
 ```
 */5 * * * * sudo /usr/local/sbin/dyndns.sh 2>&1 | logger -t dyndns
@@ -257,3 +258,48 @@ PUBLIC_IP=$(host -4 myip.opendns.com resolver1.opendns.com | grep "myip.opendns.
 #Call OVH for update
 curl --silent --user "$DYNHOST_ID:$DYNHOST_PASSWORD" "https://www.ovh.com/nic/update?system=dyndns&hostname=$DOMAIN_NAME&myip=$PUBLIC_IP"
 ```
+
+
+USB problems on RPi3:
+```
+ls /sys/bus/usb/devices/
+grep -r "1b3f" /sys/bus/usb/devices/*/idVendor 2>/dev/null
+# zastąp 1-1.X właściwą ścieżką z kroku wyżej
+echo -1 | sudo tee /sys/bus/usb/devices/1-1.X/power/autosuspend
+echo on | sudo tee /sys/bus/usb/devices/1-1.X/power/control
+
+cat /etc/udev/rules.d/50-usb-audio-nosuspend.rules
+
+echo 'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1b3f", ATTR{idProduct}=="2008", ATTR{power/control}="on"' | sudo tee -a /etc/udev/rules.d/50-usb-audio-nosuspend.rules
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+cat /sys/bus/usb/devices/1-1.*/power/autosuspend
+```
+
+Powinna zawierać dokładnie:
+```
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1b3f", ATTR{idProduct}=="2008", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
+```
+
+```
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+cat /sys/bus/usb/devices/1-1.*/power/autosuspend 2>/dev/null
+```
+```
+
+---
+
+### 3. Parametry kernela — bufor USB i quirki
+
+Dodaj do `/boot/cmdline.txt` (wszystko w jednej linii!):
+```
+dwc_otg.fiq_fsm_enable=1 dwc_otg.fiq_fix_enable=1
+```
+
+Jeśli już są — sprawdź czy nie ma `dwc_otg.fiq_fsm_enable=0`.
+
+Opcjonalnie, wyłącz FIQ split (czasem pomaga przy audio):
+```
+dwc_otg.fiq_fsm_mask=0xF
