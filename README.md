@@ -29,42 +29,48 @@ Linux raspberrypi 6.6.31+rpt-rpi-v7 #1 SMP Raspbian 1:6.6.31-1+rpt1 (2024-05-29)
 **HW:**
 raspberry pi zero 2 w
 
-**Static IP:**
-
-    sudo nmtui
-
-And then configure to get static IP address.
+**Set static IP for raspberry in your router.**
 
 Installing required packages:
-
-    sudo apt-get install git
-    sudo apt-get install nodejs
-    sudo apt-get install npm
-    sudo apt-get install sox
-    sudo apt-get install libsox-fmt-mp3
-    sudo apt-get install icecast2
+```
+sudo apt-get install git
+sudo apt-get install nodejs
+sudo apt-get install npm
+sudo apt-get install sox
+sudo apt-get install libsox-fmt-mp3
+sudo apt-get install icecast2
+```
 
 Configure icecast2 - **remember choosen password!**:
-
-    hostname: remoteUniden
-    password: password
+```
+hostname: remoteUniden
+password: password
+```
 
 Create some folder for everything:
-    
-    mkdir Project
-    cd Project
+```
+mkdir Project
+cd Project
+```
 
 Install darkice for audio stream:
+```
+sudo apt-get install darkice
+mkdir darkice
+cd darkice
+touch darkice.cfg
+touch darkice.sh
+chmod +x darkice.sh
+```
 
-    sudo apt-get install darkice
-    mkdir darkice
-    cd darkice
-    touch darkice.cfg
-    touch darkice.sh
-    chmod +x darkice.sh
+Edit darkice.cfg(sudo nano darkice.cfg) - **change password!**:
+```
+sudo nano darkice.cfg
+```
 
-Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
+and paste(modify password!):
 
+```
     # this section describes general aspects of the live streaming session
     [general]
     duration     = 0     # duration of encoding, in seconds. 0 means forever
@@ -91,40 +97,209 @@ Edit darkice.cfg(sudo nano darkice/darkice.cfg) - **change password!**:
     lowpass         = 6000
     highpass        = 100
     #public          = yes       advertise this stream?
+```
 
-Edit darkice.sh(sudo nano darkice/darkice.sh):
+Edit darkice.sh(sudo nano darkice.sh):
 
-    sudo /usr/bin/darkice -c /home/${USER}/Project/darkice/darkice.cfg
+```
+sudo nano darkice.sh
+```
+
+and paste:
+```
+sudo /usr/bin/darkice -c /home/pi/Project/darkice/darkice.cfg
+```
 
 Configure audio input:
-
-    sudo alsamixer
+```
+sudo alsamixer
+```
 
 **F4** -> disable auto gain control with '**.**' key
 
 Clone this repo:
-
-    git clone https://github.com/telewizoor/remoteUniden.git
+```
+cd ~/Project/
+git clone https://github.com/telewizoor/remoteUniden.git
+cd remoteUniden
+mkdir rec
+mkdir saved_rec
+```
 
 Install nodejs packages:
 
-    npm install package.json
+```
+npm install package.json
+```
+    
+Configure remoteUniden, place SHA256 of your password:
 
-And configure system to run darkice and remoteUniden server:
+```
+sudo nano config/default.json
+```
 
-    crontab -e
-    @reboot sleep 12 && sudo /home/${USER}/Project/darkice/darkice.sh
-    @reboot sleep 15 && sudo /home/${USER}/Project/remoteUniden/start.sh
+Run:
 
-For test run without reboot. Run darkice:
+```
+sudo setcap 'cap_net_bind_service=+ep' $(which node)
+```
 
-    sudo /usr/bin/darkice -c darkice/darkice.cfg &
+Create system service for nodejs server:
 
-CTRL+C, and run unidenServer:
+```
+sudo nano /etc/systemd/system/remote-uniden.service
+```
+and paste:
+```
+[Unit]
+Description=Remote Uniden Service
+After=network.target
 
-    sudo node remoteUnidenServer.js
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Project/remoteUniden
+ExecStart=sudo /bin/bash /home/pi/Project/remoteUniden/start.sh
+Restart=always
+RestartSec=5
 
-I'm using duckdns.org to create free subdomain and use Uniden everywhere on the same address.
+[Install]
+WantedBy=multi-user.target
+```
+
+Create system service for darkice(audio server):
+
+```
+sudo nano /etc/systemd/system/darkice-start.service
+```
+and paste:
+```
+[Unit]
+Description=Darkice Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Project/darkice
+ExecStart=/bin/bash /home/pi/Project/darkice/darkice.sh
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload and run new services:
+```
+sudo systemctl daemon-reload
+sudo systemctl enable darkice-start
+sudo systemctl start darkice-start
+sudo systemctl enable remote-uniden
+sudo systemctl start remote-uniden
+```
+
+Change raspberry config:
+
+```
+sudo nano /boot/firmware/config.txt
+```
+and add to proper lines:
+```
+dtparam=audio=off
+dtoverlay=vc4-kms-v3d,nohdmi
+```
+
+Reboot raspberry:
+```
+sudo reboot
+```
+
+
+```
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 80
+sudo ufw allow 8000
+sudo ufw allow from 192.168.0.0/16 to any port 22
+sudo ufw enable
+```
+
+```
+sudo nano /usr/local/sbin/dyndns.sh
+```
+
+```
+crontab -e:
+```
+
+paste:
+```
+*/5 * * * * sudo /usr/local/sbin/dyndns.sh 2>&1 | logger -t dyndns
+```
+
+
+```
+#!/bin/sh
+
+#Define your OVH DynHost ID & password and the domain name for which you wish to update DynHost
+DYNHOST_ID='radiomalina.pl-xxx'
+DYNHOST_PASSWORD='xxx'
+DOMAIN_NAME='xxx.radiomalina.pl'
 
 
 
+#####################
+####DO NOT TOUCH#####
+#####################
+
+PUBLIC_IP=$(host -4 myip.opendns.com resolver1.opendns.com | grep "myip.opendns.com has" | awk '{print $4}')
+
+#Call OVH for update
+curl --silent --user "$DYNHOST_ID:$DYNHOST_PASSWORD" "https://www.ovh.com/nic/update?system=dyndns&hostname=$DOMAIN_NAME&myip=$PUBLIC_IP"
+```
+
+
+USB problems on RPi3:
+```
+ls /sys/bus/usb/devices/
+grep -r "1b3f" /sys/bus/usb/devices/*/idVendor 2>/dev/null
+# zastąp 1-1.X właściwą ścieżką z kroku wyżej
+echo -1 | sudo tee /sys/bus/usb/devices/1-1.X/power/autosuspend
+echo on | sudo tee /sys/bus/usb/devices/1-1.X/power/control
+
+cat /etc/udev/rules.d/50-usb-audio-nosuspend.rules
+
+echo 'ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1b3f", ATTR{idProduct}=="2008", ATTR{power/control}="on"' | sudo tee -a /etc/udev/rules.d/50-usb-audio-nosuspend.rules
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+cat /sys/bus/usb/devices/1-1.*/power/autosuspend
+```
+
+Powinna zawierać dokładnie:
+```
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1b3f", ATTR{idProduct}=="2008", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
+```
+
+```
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+cat /sys/bus/usb/devices/1-1.*/power/autosuspend 2>/dev/null
+```
+```
+
+---
+
+### 3. Parametry kernela — bufor USB i quirki
+
+Dodaj do `/boot/cmdline.txt` (wszystko w jednej linii!):
+```
+dwc_otg.fiq_fsm_enable=1 dwc_otg.fiq_fix_enable=1
+```
+
+Jeśli już są — sprawdź czy nie ma `dwc_otg.fiq_fsm_enable=0`.
+
+Opcjonalnie, wyłącz FIQ split (czasem pomaga przy audio):
+```
+dwc_otg.fiq_fsm_mask=0xF
