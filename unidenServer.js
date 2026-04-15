@@ -745,6 +745,13 @@ function unidenRequestsReady() {
   unidenRequestsNotReady = 0;
 }
 
+function getCallIdentity(call) {
+  /* Returns channel name + frequency, skipping the channel number (CH101 etc.)
+     Used to match prio channel copies (e.g. CH101 and CH151 with same name/freq) */
+  var parts = call.toString().split("|")[0].trim().split(" ");
+  return parts.slice(1).join(" ");
+}
+
 function isChannelSpecial(chNum) {
   var isSpecial = false;
   // var specialChannels;
@@ -989,8 +996,8 @@ function handleLastCalls(receivedData) {
 
     try {
       if (lastCall != "empty") {
-        /* if current call is not currently lust call on the list */
-        if (!lastCalls[lastCalls.length - 1].toString().split("|")[0].includes(lastCall)) {
+        /* if current call is not currently last call on the list (compare by name+freq, ignoring channel number for prio channel copies) */
+        if (getCallIdentity(lastCall) !== getCallIdentity(lastCalls[lastCalls.length - 1])) {
           if (lastCalls.length >= maxLastCalls) {
             var cmd = "sudo rm " + __dirname + "/rec/" + callToRecName(lastCalls[0], 999).slice(0, -4) + "* &";
             try {
