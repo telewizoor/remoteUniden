@@ -30,7 +30,6 @@ var channelsToWrite = '';
 // obrotnica
 var headingOffset = 0;
 var antennaHeading = 0xFFFF;
-const rotorPeriod = 50;
 
 var squelchIndex           = 14;
 var lastCallsIndexFromEnd  =  4; //23; // -3
@@ -39,11 +38,10 @@ var cpuTempIndexFromEnd    =  2; //25;
 var wifiStatusIndexFromEnd =  1; //26;
 
 document.body.onload = createLastCalls();
-document.body.onload = rotorInit();
-document.body.onload = rotorUpdateGfx();
 
-
-if( subpage == "" ) {
+if (window.location.protocol == 'https:') {
+  document.body.onload = changeAudio('liveStream', curUrl + '/Stream.mp3');
+} else if( subpage == "" ) {
   document.body.onload = changeAudio('liveStream', curUrl + ':8000/Stream.mp3');
 } else {
   document.body.onload = changeAudio('liveStream', curUrl + 'ic/Stream.mp3');
@@ -319,57 +317,6 @@ function addPrioChannel( channelInfo, prioChNum ) {
     sendSocketData( "unidenAddChToPrio", chNum, prioChNum );
   }
 }
-
-function rotorInit() {
-  // document.getElementById('rotorLeft').addEventListener('pointerdown', rotorMove(0), false);
-  // document.getElementById('rotorRight').addEventListener('pointerup', rotorMove(1), false);
-}
-
-function rotorShow(input) {
-  if (!input.checked) {
-    sendSocketData( "unidenRotorShow", 0 );
-  } else {
-    sendSocketData( "unidenRotorShow", 1 );
-  }
-}
-
-function rotorUpdateGfx() {
-  if(antennaHeading < 0 || antennaHeading > 360) {
-    document.getElementById("antennaAngle").innerHTML = 'ERROR';
-    document.getElementById("needle").style.display = 'none';
-  } else {
-    document.getElementById("antennaAngle").innerHTML = antennaHeading + '\u00B0C';
-    document.getElementById("needle").style.transform = "rotate(" + antennaHeading + "deg)";
-    document.getElementById("needle").style.display = 'inline';
-  }
-}
-
-function rotorMove(dir) {
-  if(0 == dir || 1 == dir) {
-    rotorTask = setInterval(function() {
-      sendSocketData( "unidenRotorMove", dir );
-    }, rotorPeriod);
-  }
-}
-
-function rotorStop() {
-  clearInterval(rotorTask);
-}
-
-socket.on('rotorData', function(data, data2) {
-  antennaHeading = data;
-  if(antennaHeading != 0xffff) {
-    antennaHeading += headingOffset;
-    antennaHeading = antennaHeading % 360;
-  }
-
-  if(data2 == 0xaa || data2 == 0x55) {
-    document.getElementById("rotorMovingIndicator").innerHTML = 'MOVING';
-  } else {
-    document.getElementById("rotorMovingIndicator").innerHTML = 'STOPPED';
-  }
-  rotorUpdateGfx();
-});
 
 socket.on('receiveBuffer', function(data) {
   $('#debugTxt').text("");

@@ -1254,7 +1254,7 @@ if(config.get("uniden.antennaRotor")) {
   var driverDataTimeoutCnt = 0;
 
   /* init CAN */
-  canBus.init();
+  //canBus.init();
 
   function rotorShow(state) {
     if(!state) {
